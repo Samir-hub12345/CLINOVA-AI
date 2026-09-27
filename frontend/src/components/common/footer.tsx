@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { Activity, ShieldCheck, Lock, AlertTriangle, Mail } from "lucide-react";
+import { ShieldCheck, Lock, AlertTriangle, Mail } from "lucide-react";
+import { ClinovaLogo } from "@/components/common/clinova-logo";
 
 export const Footer: React.FC = () => {
   return (
@@ -9,15 +10,7 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
           {/* Col 1: Brand & Overview */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="bg-teal-600 p-1.5 rounded-lg text-white shadow-xs">
-                <Activity className="h-4 w-4" />
-              </div>
-              <span className="font-black text-base text-slate-900 tracking-tight">Clinova</span>
-              <span className="text-teal-700 font-extrabold text-[10px] bg-teal-100 px-1.5 py-0.5 rounded border border-teal-300">
-                AI
-              </span>
-            </div>
+            <ClinovaLogo variant="full" size="sm" />
             <p className="text-xs text-slate-500 leading-relaxed max-w-sm">
               Multimodal healthcare triage assistant and clinical decision support system.
               Designed for public health institutions, district hospitals, and outpatient facilities
@@ -40,29 +33,29 @@ export const Footer: React.FC = () => {
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">Platform</h4>
             <ul className="space-y-1.5 text-xs text-slate-500">
               <li>
-                <a href="/#how-it-works" className="hover:text-teal-700 transition">
+                <Link href="/#how-it-works" className="hover:text-teal-700 transition">
                   How It Works
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#features" className="hover:text-teal-700 transition">
+                <Link href="/#features" className="hover:text-teal-700 transition">
                   Clinical Features
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#who-its-for" className="hover:text-teal-700 transition">
+                <Link href="/#who-its-for" className="hover:text-teal-700 transition">
                   Who It&apos;s For
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#human-in-the-loop" className="hover:text-teal-700 transition">
+                <Link href="/#human-in-the-loop" className="hover:text-teal-700 transition">
                   Human-in-the-Loop Architecture
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#privacy-safety" className="hover:text-teal-700 transition">
+                <Link href="/#privacy-safety" className="hover:text-teal-700 transition">
                   Privacy &amp; Safety Controls
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -113,10 +106,10 @@ export const Footer: React.FC = () => {
                 <span className="text-slate-600 font-medium">Retention:</span> 24-Hour Ephemeral Cache
               </li>
               <li>
-                <a href="/#contact" className="hover:text-teal-700 transition flex items-center gap-1">
+                <Link href="/#contact" className="hover:text-teal-700 transition flex items-center gap-1">
                   <Mail className="w-3 h-3 text-teal-600" />
                   <span>Institutional Inquiries</span>
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

@@ -67,7 +67,8 @@ export default function DocumentsPage() {
         include_archived: includeArchived,
       });
       if (res.data) {
-        setDocuments(res.data);
+        const docs = Array.isArray(res.data) ? res.data : ((res.data as any)?.items || []);
+        setDocuments(docs);
       }
     } catch (err) {
       console.error("Failed to fetch documents", err);

@@ -192,6 +192,9 @@ async def toggle_user_status(
     if not target_user:
         raise HTTPException(status_code=404, detail="User account not found.")
 
+    if target_user.id == current_user.id and not is_active:
+        raise HTTPException(status_code=400, detail="Cannot deactivate own admin account.")
+
     target_user.is_active = is_active
     await db.commit()
     await db.refresh(target_user)

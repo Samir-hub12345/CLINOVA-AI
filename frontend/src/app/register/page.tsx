@@ -18,6 +18,7 @@ import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { Button } from "@/components/ui/button";
 import { ClinicalDisclaimer } from "@/components/clinical/disclaimer";
+import { ClinovaLogo } from "@/components/common/clinova-logo";
 
 function RegisterForm() {
   const router = useRouter();
@@ -64,8 +65,8 @@ function RegisterForm() {
   return (
     <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
       <div className="text-center space-y-1">
-        <div className="inline-flex p-3 bg-teal-50 text-teal-600 rounded-xl border border-teal-100 mb-2">
-          <Activity className="w-7 h-7 text-teal-600" />
+        <div className="inline-flex p-2.5 bg-teal-50/80 rounded-2xl border border-teal-100/80 shadow-xs mb-2">
+          <ClinovaLogo variant="mark" size="lg" priority={true} />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create Account</h1>
         <p className="text-xs text-slate-500">

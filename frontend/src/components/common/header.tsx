@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
   Menu,
   X,
   LogOut,
@@ -17,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { dashboardPath } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import { NetworkIndicator } from "@/components/common/network-indicator";
+import { ClinovaLogo } from "@/components/common/clinova-logo";
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
@@ -117,24 +117,14 @@ export const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo & Tag */}
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="bg-teal-600 group-hover:bg-teal-700 transition p-2 rounded-xl text-white shadow-sm flex-shrink-0">
-              <Activity className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-lg tracking-tight text-slate-900 group-hover:text-teal-900 transition">
-                  Clinova
-                </span>
-                <span className="text-teal-700 font-extrabold text-[10px] bg-teal-100 px-1.5 py-0.5 rounded border border-teal-300">
-                  AI
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-500 font-medium hidden sm:block leading-none">
-                Multimodal Healthcare Triage Support
-              </p>
-            </div>
-          </Link>
+          <ClinovaLogo
+            href="/"
+            variant="full"
+            size="md"
+            showTagline={true}
+            taglineText="Multimodal Healthcare Triage"
+            priority={true}
+          />
 
           {/* Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center gap-1">

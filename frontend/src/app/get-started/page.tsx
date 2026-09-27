@@ -12,6 +12,7 @@ import {
 import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { ClinicalDisclaimer } from "@/components/clinical/disclaimer";
+import { ClinovaLogo } from "@/components/common/clinova-logo";
 import { useAuth } from "@/lib/auth";
 import { dashboardPath } from "@/lib/permissions";
 import { useRouter } from "next/navigation";
@@ -36,8 +37,8 @@ export default function GetStartedPage() {
 
         {/* Page Header */}
         <div className="text-center max-w-xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200 shadow-xs">
+            <ClinovaLogo variant="mark" size="xs" />
             <span>Welcome to Clinova AI</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">

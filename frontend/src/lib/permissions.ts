@@ -1,8 +1,11 @@
 import { UserRole } from "@/types";
 
 export const dashboardForRole: Record<UserRole, string> = {
-  patient: "/dashboard/patient", doctor: "/dashboard/doctor",
-  admin: "/dashboard/admin", nurse: "/dashboard/nurse",
+  patient: "/dashboard/patient",
+  doctor: "/dashboard/doctor",
+  admin: "/dashboard/admin",
+  nurse: "/dashboard/nurse",
+  staff: "/dashboard/staff",
 };
 export function dashboardPath(role: UserRole): string {
   return dashboardForRole[role] || "/unauthorized";
@@ -24,10 +27,19 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
     { label: "Documents", href: "/documents" },
   ],
   nurse: [
-    { label: "Staff Dashboard", href: "/dashboard/nurse" },
+    { label: "Nurse Station", href: "/dashboard/nurse" },
     { label: "Patient Intake", href: "/intake" },
     { label: "Review Queue", href: "/review" },
     { label: "Patients", href: "/patients" },
+    { label: "Front Desk Console", href: "/dashboard/staff" },
+    { label: "Documents", href: "/documents" },
+  ],
+  staff: [
+    { label: "Front Desk Console", href: "/dashboard/staff" },
+    { label: "Patient Registration", href: "/intake" },
+    { label: "Review & Routing", href: "/review" },
+    { label: "Patient Directory", href: "/patients" },
+    { label: "Nurse Station", href: "/dashboard/nurse" },
     { label: "Documents", href: "/documents" },
   ],
   admin: [
@@ -36,23 +48,23 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
     { label: "Documents", href: "/documents" },
   ],
 };
-const allRoles: UserRole[] = ["patient", "doctor", "nurse", "admin"];
-const clinical: UserRole[] = ["doctor", "nurse"];
+const allRoles: UserRole[] = ["patient", "doctor", "nurse", "admin", "staff"];
+const clinical: UserRole[] = ["doctor", "nurse", "staff"];
 const protectedPrefixes: [string, UserRole[]][] = [
   ["/dashboard/patient", ["patient"]],
   ["/dashboard/doctor", ["doctor"]],
   ["/dashboard/admin", ["admin"]],
-  ["/dashboard/nurse", ["nurse"]],
-  ["/dashboard/staff", ["nurse"]],
+  ["/dashboard/nurse", ["nurse", "staff"]],
+  ["/dashboard/staff", ["staff", "nurse"]],
   ["/dashboard", allRoles],
   ["/portal", ["patient"]],
   ["/patients/profile", ["patient"]],
   ["/patients", clinical],
   ["/review", clinical],
-  ["/consultations", clinical],
+  ["/consultations", ["doctor", "nurse"]],
   ["/triage", ["doctor"]],
   ["/audit", ["admin"]],
-  ["/intake", ["patient", "doctor", "nurse"]],
+  ["/intake", ["patient", "doctor", "nurse", "staff"]],
   ["/documents", allRoles],
 ];
 export function rolesForPath(path: string): UserRole[] | null {

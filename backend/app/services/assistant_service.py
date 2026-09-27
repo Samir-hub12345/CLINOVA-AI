@@ -109,23 +109,23 @@ class AssistantService:
         if any("\u0A00" <= c <= "\u0A7F" for c in text):
             return "pa"  # Punjabi
 
-        # 2. Phonetic Romanized Hindi keywords
+        # 2. Phonetic Romanized Hindi keywords (word-boundary matched)
         lower = text.lower()
         hi_words = [
             "namaste", "namaskar", "mera", "meri", "mere", "mujhe", "aap", "tum",
             "dard", "sir dard", "pet dard", "bukhar", "khansi", "dawa", "kripya",
             "kya", "kyu", "kaise", "thik", "nahi", "haan", "batao", "madad",
-            "chhati", "saans", "takleef", "doctor"
+            "chhati", "saans", "takleef", "bimar", "bhookh"
         ]
-        if any(w in lower for w in hi_words):
+        if any(re.search(rf"\b{re.escape(w)}\b", lower) for w in hi_words):
             return "hi"
 
-        # 3. Phonetic Romanized Odia keywords
+        # 3. Phonetic Romanized Odia keywords (word-boundary matched)
         or_words = [
             "mora", "mote", "munda", "bindhuchi", "peto", "jwara", "kasa",
             "au", "kaha", "hete", "achi", "nahin", "sahajya", "dhanyabad"
         ]
-        if any(w in lower for w in or_words):
+        if any(re.search(rf"\b{re.escape(w)}\b", lower) for w in or_words):
             return "or"
 
         return "en"

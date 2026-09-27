@@ -7,6 +7,7 @@ import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { ClinicalDisclaimer } from "@/components/clinical/disclaimer";
 import { AdaptiveImage } from "@/components/common/adaptive-image";
+import { ClinovaLogo } from "@/components/common/clinova-logo";
 import {
   Mic,
   FileText,
@@ -187,8 +188,8 @@ export default function Home() {
 
         {/* 1. HERO SECTION */}
         <section className="w-full text-center space-y-6 pt-4 max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-teal-50/90 text-teal-800 border border-teal-200/80 shadow-xs">
+            <ClinovaLogo variant="mark" size="xs" priority={true} />
             <span>Clinical Decision Support System &bull; Multimodal Triage Assistant</span>
           </div>
 
@@ -256,9 +257,9 @@ export default function Home() {
           <div className="pt-8 w-full">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-left space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-teal-50 rounded-lg text-teal-700">
-                    <Activity className="w-5 h-5" />
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-teal-50 rounded-lg flex items-center justify-center">
+                    <ClinovaLogo variant="mark" size="sm" />
                   </div>
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
@@ -724,7 +725,10 @@ export default function Home() {
         </section>
 
         {/* 9. FINAL CALL TO ACTION */}
-        <section className="w-full bg-gradient-to-br from-teal-700 to-teal-900 rounded-3xl p-8 sm:p-12 text-center text-white space-y-5 shadow-lg">
+        <section className="w-full bg-gradient-to-br from-teal-700 to-teal-900 rounded-3xl p-8 sm:p-12 text-center text-white space-y-5 shadow-lg relative overflow-hidden">
+          <div className="flex justify-center mb-1">
+            <ClinovaLogo variant="badge" size="lg" />
+          </div>
           <h2 className="text-2xl sm:text-4xl font-black tracking-tight">
             Ready to Streamline Triage in Your Facility?
           </h2>

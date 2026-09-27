@@ -9,22 +9,35 @@ import {
   Sparkles,
   Radio,
   Pause,
-  Play,
   FileText,
   ChevronDown,
-  ChevronUp,
-  Maximize2,
   Minimize2,
   Copy,
   Check,
-  RotateCcw,
-  Zap,
   Globe,
-  Settings,
+  AlertCircle,
+  Send,
 } from "lucide-react";
 import { assistantApi } from "@/lib/api";
 import { ProposedAction } from "@/types";
 import { useAuth } from "@/lib/auth";
+import { ClinovaLogo } from "@/components/common/clinova-logo";
+
+export interface LanguageOption {
+  code: string;
+  name: string;
+  locale: string;
+}
+
+export const LANGUAGE_OPTIONS: LanguageOption[] = [
+  { code: "auto", name: "Auto-Detect (Multilingual)", locale: "en-IN" },
+  { code: "en", name: "English", locale: "en-IN" },
+  { code: "hi", name: "हिन्दी (Hindi)", locale: "hi-IN" },
+  { code: "or", name: "ଓଡ଼ିଆ (Odia)", locale: "or-IN" },
+  { code: "bn", name: "বাংলা (Bengali)", locale: "bn-IN" },
+  { code: "ta", name: "தமிழ் (Tamil)", locale: "ta-IN" },
+  { code: "te", name: "తెలుగు (Telugu)", locale: "te-IN" },
+];
 
 // -------------------------------------------------------------
 // HELPER: Detect Script Ranges for Real-Time Multilingual Speech
@@ -176,6 +189,19 @@ export const FloatingAssistant: React.FC = () => {
   const [selectedPersona, setSelectedPersona] = useState<VoicePersona>(VOICE_PERSONAS[0]);
   const [speechRate, setSpeechRate] = useState<number>(1.0);
   const [language, setLanguage] = useState<string>("en");
+
+  // Language & Metadata State (Workstream B / Section 7.5, 8.2, 8.4)
+  const [selectedLanguageCode, setSelectedLanguageCode] = useState<string>("auto");
+  const [isManualLanguageOverride, setIsManualLanguageOverride] = useState<boolean>(false);
+  const [detectedLanguageLabel, setDetectedLanguageLabel] = useState<string>("Auto-Detect (Active)");
+  const [recognitionLocale, setRecognitionLocale] = useState<string>("en-IN");
+  const [showLanguagePicker, setShowLanguagePicker] = useState<boolean>(false);
+
+  // Turn Submission Idempotency & Error Handling
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [showTextFallback, setShowTextFallback] = useState<boolean>(false);
+  const [fallbackTypedText, setFallbackTypedText] = useState<string>("");
+  const isSubmittingTurnRef = useRef<boolean>(false);
 
   // Real-time Audio Reactive Energy (0.0 to 1.0)
   const [audioLevel, setAudioLevel] = useState<number>(0);
@@ -340,6 +366,42 @@ export const FloatingAssistant: React.FC = () => {
     }
   }, [conversationHistory, showTranscript]);
 
+  const selectLanguageMode = (code: string) => {
+    setShowLanguagePicker(false);
+    setSelectedLanguageCode(code);
+    if (code === "auto") {
+      setIsManualLanguageOverride(false);
+      setLanguage("en");
+      setRecognitionLocale("en-IN");
+      setDetectedLanguageLabel("Auto-Detect (Active)");
+      if (typeof window !== "undefined") {
+        localStorage.setItem("clinova_assistant_lang_mode", "auto");
+      }
+    } else {
+      const match = LANGUAGE_OPTIONS.find((l) => l.code === code);
+      setIsManualLanguageOverride(true);
+      setLanguage(code);
+      const loc = match?.locale || `${code}-IN`;
+      setRecognitionLocale(loc);
+      setDetectedLanguageLabel(`${match?.name || code.toUpperCase()} (Manual Override)`);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("clinova_assistant_lang_mode", code);
+      }
+    }
+
+    if (recognitionRef.current && isListeningRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {}
+      isListeningRef.current = false;
+      setTimeout(() => {
+        if (voiceActiveRef.current && !isSpeakingRef.current && !isMutedRef.current) {
+          startListening();
+        }
+      }, 150);
+    }
+  };
+
   // -------------------------------------------------------------
   // REAL-TIME AUDIO ANALYSER (Reactive living fluid orb)
   // -------------------------------------------------------------
@@ -501,8 +563,10 @@ export const FloatingAssistant: React.FC = () => {
   // -------------------------------------------------------------
   const processSpokenInput = async (spokenText: string) => {
     const clean = spokenText.trim();
-    if (!clean) return;
+    if (!clean || isSubmittingTurnRef.current) return;
 
+    isSubmittingTurnRef.current = true;
+    setVoiceError(null);
     setInterimSpeech("");
     setHumanSpeech(clean);
     setVoiceState("thinking");
@@ -558,12 +622,15 @@ export const FloatingAssistant: React.FC = () => {
           recordAssistantTurn(failReply, "Error");
           speakVoice(failReply);
           return;
+        } finally {
+          isSubmittingTurnRef.current = false;
         }
       } else if (isNegative) {
         setPendingAction(null);
         const cancelReply = "Action cancelled.";
         recordAssistantTurn(cancelReply, "Action Cancelled");
         speakVoice(cancelReply);
+        isSubmittingTurnRef.current = false;
         return;
       }
     }
@@ -587,8 +654,17 @@ export const FloatingAssistant: React.FC = () => {
         const replyText = res.data.text;
         const sourceLabel = res.data.source_label || "Clinova Voice AI";
 
-        if (res.data.detected_language && res.data.detected_language !== language) {
+        if (!isManualLanguageOverride && res.data.detected_language && res.data.detected_language !== language) {
           setLanguage(res.data.detected_language);
+          const names: Record<string, string> = {
+            en: "English",
+            hi: "Hindi",
+            or: "Odia",
+            bn: "Bengali",
+            ta: "Tamil",
+            te: "Telugu",
+          };
+          setDetectedLanguageLabel(`${names[res.data.detected_language] || res.data.detected_language.toUpperCase()} (Auto)`);
         }
 
         recordAssistantTurn(replyText, sourceLabel);
@@ -602,14 +678,21 @@ export const FloatingAssistant: React.FC = () => {
           speakVoice(replyText);
         }
       } else {
-        const fallbackMsg = "I could not process that. Please say that again.";
+        const fallbackMsg = res.error || "I could not process that. Please say that again.";
         recordAssistantTurn(fallbackMsg, "Error");
         speakVoice(fallbackMsg);
+        setVoiceError(fallbackMsg);
       }
     } catch {
       const errMsg = "Connection issue. Please check your network and speak again.";
       recordAssistantTurn(errMsg, "Connection Notice");
       speakVoice(errMsg);
+      setVoiceError(errMsg);
+    } finally {
+      isSubmittingTurnRef.current = false;
+      if (!isSpeakingRef.current && voiceActiveRef.current && !isMutedRef.current) {
+        setVoiceState("idle");
+      }
     }
   };
 
@@ -630,13 +713,23 @@ export const FloatingAssistant: React.FC = () => {
   // SPEECH RECOGNITION LISTENER (Streaming real-time STT)
   // -------------------------------------------------------------
   const startListening = () => {
-    if (typeof window === "undefined" || isSpeakingRef.current || isMutedRef.current) return;
+    if (
+      typeof window === "undefined" ||
+      isSpeakingRef.current ||
+      isMutedRef.current ||
+      isSubmittingTurnRef.current
+    )
+      return;
 
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      speakVoice("Voice recognition is not supported in this browser. Please use Chrome or Edge.");
+      setVoiceError(
+        "Voice recognition is not supported in this browser. Please use Chrome or Edge, or type your query below."
+      );
+      setShowTextFallback(true);
+      setVoiceState("idle");
       return;
     }
 
@@ -650,65 +743,92 @@ export const FloatingAssistant: React.FC = () => {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang =
-        language === "hi"
-          ? "hi-IN"
-          : language === "or"
-          ? "or-IN"
-          : language === "bn"
-          ? "bn-IN"
-          : language === "ta"
-          ? "ta-IN"
-          : language === "te"
-          ? "te-IN"
+
+      const currentLocale =
+        isManualLanguageOverride
+          ? language === "hi"
+            ? "hi-IN"
+            : language === "or"
+            ? "or-IN"
+            : language === "bn"
+            ? "bn-IN"
+            : language === "ta"
+            ? "ta-IN"
+            : language === "te"
+            ? "te-IN"
+            : "en-IN"
           : "en-IN";
+
+      recognition.lang = currentLocale;
+      setRecognitionLocale(currentLocale);
 
       recognition.onstart = () => {
         isListeningRef.current = true;
+        setVoiceError(null);
         setVoiceState("listening");
       };
 
       recognition.onresult = (event: any) => {
-        // If assistant was speaking and speech recognition detected user words, barge-in!
         if (isSpeakingRef.current) {
           interruptAssistant("speech_detected");
         }
 
         let interim = "";
-        let finalTranscript = "";
+        let accumulatedFinal = "";
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
+        // Standard Web Speech API: accumulate all finalized items and capture current interim
+        for (let i = 0; i < event.results.length; ++i) {
+          const item = event.results[i];
+          if (item.isFinal) {
+            accumulatedFinal += item[0].transcript + " ";
           } else {
-            interim += event.results[i][0].transcript;
+            interim += item[0].transcript;
           }
         }
+        accumulatedFinal = accumulatedFinal.trim();
+        interim = interim.trim();
 
-        const currentStream = (finalTranscript || interim).trim();
+        setHumanSpeech(accumulatedFinal);
+        setInterimSpeech(interim);
+
+        const currentStream = (accumulatedFinal + " " + interim).trim();
         if (currentStream) {
-          setInterimSpeech(currentStream);
-
-          // Real-time language detection on the fly
-          if (anyCharInRange(currentStream, 0x0900, 0x097F)) {
-            setLanguage("hi");
-          } else if (anyCharInRange(currentStream, 0x0B00, 0x0B7F)) {
-            setLanguage("or");
-          } else if (anyCharInRange(currentStream, 0x0980, 0x09FF)) {
-            setLanguage("bn");
-          } else if (anyCharInRange(currentStream, 0x0B80, 0x0BFF)) {
-            setLanguage("ta");
-          } else if (anyCharInRange(currentStream, 0x0C00, 0x0C7F)) {
-            setLanguage("te");
+          // Real-time language script identification if in auto mode
+          if (!isManualLanguageOverride) {
+            if (anyCharInRange(currentStream, 0x0900, 0x097F)) {
+              setLanguage("hi");
+              setDetectedLanguageLabel("Hindi (Auto)");
+            } else if (anyCharInRange(currentStream, 0x0B00, 0x0B7F)) {
+              setLanguage("or");
+              setDetectedLanguageLabel("Odia (Auto)");
+            } else if (anyCharInRange(currentStream, 0x0980, 0x09FF)) {
+              setLanguage("bn");
+              setDetectedLanguageLabel("Bengali (Auto)");
+            } else if (anyCharInRange(currentStream, 0x0B80, 0x0BFF)) {
+              setLanguage("ta");
+              setDetectedLanguageLabel("Tamil (Auto)");
+            } else if (anyCharInRange(currentStream, 0x0C00, 0x0C7F)) {
+              setLanguage("te");
+              setDetectedLanguageLabel("Telugu (Auto)");
+            } else {
+              const hasLetters = /[a-zA-Z]/.test(currentStream);
+              if (hasLetters) {
+                setLanguage("en");
+                setDetectedLanguageLabel("English (Auto)");
+              } else {
+                setDetectedLanguageLabel("Detection uncertain (en-IN default)");
+              }
+            }
           }
         }
 
         // Silence / pause debounce: When user stops speaking, finalize and trigger AI turn
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        const textToProcess = (finalTranscript || interim).trim();
+        const textToProcess = (accumulatedFinal || interim).trim();
 
-        if (textToProcess) {
+        if (textToProcess && !isSubmittingTurnRef.current) {
           silenceTimerRef.current = setTimeout(() => {
+            if (isSubmittingTurnRef.current) return;
             if (recognitionRef.current) {
               try {
                 recognitionRef.current.stop();
@@ -716,25 +836,49 @@ export const FloatingAssistant: React.FC = () => {
               isListeningRef.current = false;
             }
             processSpokenInput(textToProcess);
-          }, finalTranscript ? 650 : 1000);
+          }, accumulatedFinal ? 750 : 1200);
         }
       };
 
       recognition.onerror = (e: any) => {
-        if (e.error === "no-speech") {
-          if (voiceActiveRef.current && !isSpeakingRef.current && !isMutedRef.current) {
+        if (e.error === "not-allowed" || e.error === "permission-denied") {
+          setVoiceError(
+            "Microphone access is blocked or denied. Please grant microphone permissions in your browser, or type your query below."
+          );
+          setShowTextFallback(true);
+          setVoiceState("idle");
+          isListeningRef.current = false;
+        } else if (e.error === "no-speech") {
+          // Normal pause during listening; don't fabricate turn or show error
+          if (
+            voiceActiveRef.current &&
+            !isSpeakingRef.current &&
+            !isMutedRef.current &&
+            !isSubmittingTurnRef.current
+          ) {
             try {
               recognition.start();
             } catch {}
           }
+        } else if (e.error === "network") {
+          setVoiceError("Network issue encountered during speech recognition.");
+          setShowTextFallback(true);
+          setVoiceState("idle");
+          isListeningRef.current = false;
         } else if (e.error !== "aborted") {
+          setVoiceError(`Speech recognition notice: ${e.error}`);
           isListeningRef.current = false;
         }
       };
 
       recognition.onend = () => {
         isListeningRef.current = false;
-        if (voiceActiveRef.current && !isSpeakingRef.current && !isMutedRef.current) {
+        if (
+          voiceActiveRef.current &&
+          !isSpeakingRef.current &&
+          !isMutedRef.current &&
+          !isSubmittingTurnRef.current
+        ) {
           try {
             recognition.start();
           } catch {}
@@ -758,6 +902,7 @@ export const FloatingAssistant: React.FC = () => {
     setIsMuted(false);
     isMutedRef.current = false;
     setPendingAction(null);
+    setVoiceError(null);
 
     playChime("connect");
     startAudioAnalyser();
@@ -777,28 +922,35 @@ export const FloatingAssistant: React.FC = () => {
     playChime("disconnect");
     stopAudioAnalyser();
 
-    setVoiceActive(false);
-    voiceActiveRef.current = false;
-    setVoiceState("idle");
-    setIsExpanded(false);
-    setShowTranscript(false);
-    setShowPersonaPicker(false);
-    setPendingAction(null);
-    setInterimSpeech("");
-    setHumanSpeech("");
-    setAssistantSpeech("");
-
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
     }
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
       } catch {}
-      isListeningRef.current = false;
+      recognitionRef.current = null;
     }
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    isSpeakingRef.current = false;
+    isListeningRef.current = false;
+    voiceActiveRef.current = false;
+    isSubmittingTurnRef.current = false;
+
+    setVoiceActive(false);
+    setVoiceState("idle");
+    setIsExpanded(false);
+    setShowTranscript(false);
+    setShowPersonaPicker(false);
+    setShowLanguagePicker(false);
+    setInterimSpeech("");
+    setVoiceError(null);
   };
 
   const toggleMute = () => {
@@ -968,6 +1120,8 @@ export const FloatingAssistant: React.FC = () => {
           <div className="w-full max-w-4xl mx-auto px-6 py-5 flex items-center justify-between border-b border-slate-800/80">
             {/* Mode & Live Status Badge */}
             <div className="flex items-center gap-3">
+              <ClinovaLogo variant="full" size="sm" theme="dark" />
+              <div className="hidden sm:block w-px h-5 bg-slate-800" />
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-teal-500/30">
                 <span
                   className={`w-2.5 h-2.5 rounded-full ${
@@ -991,10 +1145,41 @@ export const FloatingAssistant: React.FC = () => {
                 </span>
               </div>
 
-              {/* Language Tag */}
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-700 text-[11px] font-mono text-slate-300 uppercase">
-                <Globe className="w-3 h-3 text-teal-400" />
-                {language}
+              {/* Interactive Language Selector & Metadata Badge */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowLanguagePicker(!showLanguagePicker)}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-xs font-mono text-slate-200 transition-all shadow-xs cursor-pointer"
+                  title="Toggle Language Recognition Mode (Auto vs Manual Override)"
+                >
+                  <Globe className="w-3.5 h-3.5 text-teal-400" />
+                  <span>{detectedLanguageLabel}</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
+
+                {showLanguagePicker && (
+                  <div className="absolute left-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-3 py-1.5">
+                      Language Mode & Recognition
+                    </div>
+                    {LANGUAGE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.code}
+                        type="button"
+                        onClick={() => selectLanguageMode(opt.code)}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                          selectedLanguageCode === opt.code
+                            ? "bg-teal-500/20 text-teal-200 border border-teal-500/30 font-semibold"
+                            : "hover:bg-slate-800 text-slate-300"
+                        }`}
+                      >
+                        <span>{opt.name}</span>
+                        <span className="text-[10px] font-mono text-slate-500">{opt.locale}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1169,8 +1354,8 @@ export const FloatingAssistant: React.FC = () => {
               )}
             </div>
 
-            {/* Live Streaming Subtitles */}
-            <div className="mt-8 w-full max-w-lg min-h-[80px] max-h-[120px] overflow-y-auto text-center px-4">
+            {/* Live Streaming Subtitles & Transcript */}
+            <div className="mt-6 w-full max-w-lg min-h-[90px] max-h-[140px] overflow-y-auto text-center px-4">
               {/* While AI is speaking */}
               {voiceState === "speaking" && assistantSpeech && (
                 <p className="text-teal-200 text-sm sm:text-base leading-relaxed font-medium animate-in fade-in">
@@ -1178,29 +1363,112 @@ export const FloatingAssistant: React.FC = () => {
                 </p>
               )}
 
-              {/* While User is speaking (word-by-word streaming) */}
-              {voiceState !== "speaking" && (interimSpeech || humanSpeech) && (
-                <p className="text-slate-200 text-sm sm:text-base leading-relaxed animate-in fade-in">
-                  <span className="text-slate-400 text-xs block font-semibold uppercase tracking-wider mb-1">
-                    You Said:
+              {/* While User is speaking or just finished */}
+              {voiceState !== "speaking" && (humanSpeech || interimSpeech) && (
+                <div className="space-y-1 animate-in fade-in">
+                  <span className="text-slate-400 text-[11px] block font-semibold uppercase tracking-wider">
+                    Recognized Speech:
                   </span>
-                  &ldquo;{interimSpeech || humanSpeech}&rdquo;
-                </p>
+                  <p className="text-slate-100 text-sm sm:text-base leading-relaxed">
+                    <span>&ldquo;{humanSpeech}</span>
+                    {interimSpeech && (
+                      <span className="text-teal-300 italic font-normal">
+                        {" "}{interimSpeech}
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse ml-1 align-middle" />
+                      </span>
+                    )}
+                    <span>&rdquo;</span>
+                  </p>
+                  <div className="text-[11px] text-teal-400 font-mono">
+                    {detectedLanguageLabel} • Locale: {recognitionLocale}
+                  </div>
+                </div>
               )}
 
               {/* Idle State Prompt */}
-              {voiceState === "listening" && !interimSpeech && !humanSpeech && (
-                <p className="text-slate-400 text-sm italic">
-                  Listening... speak naturally in English, Hindi, or Odia
-                </p>
+              {voiceState === "listening" && !humanSpeech && !interimSpeech && (
+                <div className="space-y-1">
+                  <p className="text-slate-300 text-sm font-medium">
+                    Listening... speak naturally in English, Hindi, or Odia
+                  </p>
+                  <p className="text-slate-500 text-xs font-mono">
+                    Active: {detectedLanguageLabel}
+                  </p>
+                </div>
               )}
 
+              {/* Thinking State */}
               {voiceState === "thinking" && (
-                <p className="text-amber-300 text-sm font-medium animate-pulse">
-                  Processing clinical input...
-                </p>
+                <div className="space-y-2 animate-pulse">
+                  <p className="text-amber-300 text-sm font-medium">
+                    Clinova AI is formulating clinical response...
+                  </p>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    Input: &ldquo;{humanSpeech}&rdquo;
+                  </div>
+                </div>
               )}
             </div>
+
+            {/* Voice Error Banner & Text Fallback Prompt */}
+            {voiceError && (
+              <div className="mt-4 p-3.5 bg-rose-950/80 border border-rose-500/50 rounded-2xl max-w-md text-center text-xs text-rose-200 space-y-2 animate-in fade-in">
+                <div className="flex items-center justify-center gap-1.5 text-rose-300 font-bold uppercase tracking-wider text-[11px]">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>Microphone / Speech Notice</span>
+                </div>
+                <div>{voiceError}</div>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVoiceError(null);
+                      startListening();
+                    }}
+                    className="px-3 py-1 bg-rose-800 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                  >
+                    Retry Voice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowTextFallback(true)}
+                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer"
+                  >
+                    Type Instead
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Text Input Fallback Bar (When mic is blocked/denied or user wants to type) */}
+            {showTextFallback && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (fallbackTypedText.trim() && !isSubmittingTurnRef.current) {
+                    processSpokenInput(fallbackTypedText.trim());
+                    setFallbackTypedText("");
+                  }
+                }}
+                className="mt-4 w-full max-w-md flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-2xl p-1.5"
+              >
+                <input
+                  type="text"
+                  value={fallbackTypedText}
+                  onChange={(e) => setFallbackTypedText(e.target.value)}
+                  placeholder="Type a clinical query or question..."
+                  className="flex-1 bg-transparent px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!fallbackTypedText.trim() || voiceState === "thinking"}
+                  className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Send className="w-3 h-3" />
+                  <span>Send</span>
+                </button>
+              </form>
+            )}
 
             {/* Spoken Action Confirmation Gate */}
             {pendingAction && (
@@ -1335,6 +1603,7 @@ export const FloatingAssistant: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                        {t.role !== "user" && <ClinovaLogo variant="mark" size="xs" />}
                         <span className="font-semibold text-slate-300">
                           {t.role === "user" ? "You" : t.persona || "Clinova"}
                         </span>
@@ -1399,7 +1668,7 @@ export const FloatingAssistant: React.FC = () => {
                   : voiceState === "speaking"
                   ? "bg-gradient-to-tr from-teal-500 to-cyan-500 text-white ring-4 ring-teal-300 shadow-teal-500/50 scale-110"
                   : "bg-gradient-to-tr from-rose-600 to-pink-600 text-white ring-4 ring-rose-300 shadow-rose-600/50 scale-110"
-                : "bg-gradient-to-tr from-teal-600 to-emerald-600 text-white hover:shadow-teal-600/50 hover:scale-105 active:scale-95"
+                : "bg-white text-slate-800 ring-2 ring-teal-500/30 hover:ring-teal-500 shadow-xl hover:shadow-teal-500/20 hover:scale-105 active:scale-95"
             }`}
           >
             {/* Ripples when active */}
@@ -1419,7 +1688,12 @@ export const FloatingAssistant: React.FC = () => {
                 <Mic className="w-7 h-7 animate-pulse" />
               )
             ) : (
-              <Mic className="w-7 h-7" />
+              <div className="relative flex items-center justify-center p-1">
+                <ClinovaLogo variant="mark" size="md" />
+                <span className="absolute -bottom-1 -right-1 p-1 rounded-full bg-teal-600 text-white shadow-xs">
+                  <Mic className="w-2.5 h-2.5" />
+                </span>
+              </div>
             )}
           </button>
         </div>

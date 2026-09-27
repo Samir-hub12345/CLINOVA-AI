@@ -648,7 +648,7 @@ export const documentsApi = {
     if (params?.limit) q.set("limit", String(params.limit));
 
     const qs = q.toString() ? `?${q.toString()}` : "";
-    return fetchApi<MedicalDocument[]>(`/api/v1/documents${qs}`);
+    return fetchApi<{ total: number; items: MedicalDocument[] } | MedicalDocument[]>(`/api/v1/documents${qs}`);
   },
 
   async uploadDocument(formData: FormData) {

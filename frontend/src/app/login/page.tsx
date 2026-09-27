@@ -23,15 +23,21 @@ import { Header } from "@/components/common/header";
 import { Footer } from "@/components/common/footer";
 import { Button } from "@/components/ui/button";
 import { ClinicalDisclaimer } from "@/components/clinical/disclaimer";
+import { ClinovaLogo } from "@/components/common/clinova-logo";
 
 function LoginForm() {
   const router = useRouter();
   const { setUser, user, loading: authLoading } = useAuth();
-  useEffect(() => {
-    if (!authLoading && user) router.replace(dashboardPath(user.role));
-  }, [user, authLoading, router]);
   const searchParams = useSearchParams();
   const roleParam = searchParams?.get("role");
+  const redirectParam = searchParams?.get("redirect");
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      const target = redirectParam || dashboardPath(user.role);
+      router.replace(target);
+    }
+  }, [user, authLoading, router, redirectParam]);
 
   const [activeTab, setActiveTab] = useState<"patient" | "nurse" | "doctor" | "admin">("doctor");
   const [email, setEmail] = useState("");
@@ -71,7 +77,8 @@ function LoginForm() {
       setError(res.error);
     } else if (res.data) {
       setUser(res.data.user);
-      router.replace(dashboardPath(res.data.user.role));
+      const target = redirectParam || dashboardPath(res.data.user.role);
+      router.replace(target);
     }
   };
 
@@ -97,8 +104,8 @@ function LoginForm() {
     <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
       {/* Header */}
       <div className="text-center space-y-1">
-        <div className="inline-flex p-3 bg-teal-50 text-teal-600 rounded-xl border border-teal-100 mb-2">
-          <Activity className="w-7 h-7 text-teal-600" />
+        <div className="inline-flex p-2.5 bg-teal-50/80 rounded-2xl border border-teal-100/80 shadow-xs mb-2">
+          <ClinovaLogo variant="mark" size="lg" priority={true} />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Clinova AI Portal Sign In</h1>
         <p className="text-xs text-slate-500">

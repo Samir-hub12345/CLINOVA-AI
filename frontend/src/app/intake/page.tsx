@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { OCRField, CaseReceipt, TriageCase } from "@/types";
 import { useConnectivity } from "@/lib/connectivity";
+import { combineTranscripts } from "@/lib/speech-recognition";
 import {
   ShieldCheck,
   Languages,
@@ -72,14 +73,16 @@ export default function PatientIntakePage() {
     }
   };
 
-  const handleVoiceTranscribed = async (transcript: string, detected: string) => {
+  const handleVoiceTranscribed = async (
+    transcript: string,
+    detected: string,
+    mode: "replace" | "append" = "append"
+  ) => {
     setSpeechTranscript(transcript);
     setDetectedLang(detected);
-    if (!symptomsText) {
-      setSymptomsText(transcript);
-    }
+    setSymptomsText((prev) => combineTranscripts(prev, transcript, mode));
 
-    if (preferredLang !== "en" || detected.toLowerCase() !== "english") {
+    if (preferredLang !== "en" || !detected.toLowerCase().includes("english")) {
       setIsTranslating(true);
       const res = await api.translateText(transcript, preferredLang);
       if (res.data) {
@@ -407,6 +410,7 @@ export default function PatientIntakePage() {
                   {/* 1. Voice Input */}
                   <VoiceRecorder
                     languageHint={preferredLang}
+                    existingText={symptomsText}
                     onTranscriptionComplete={handleVoiceTranscribed}
                   />
 

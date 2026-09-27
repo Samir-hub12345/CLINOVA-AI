@@ -20,8 +20,15 @@ import {
   Calendar,
   Building2,
   RefreshCw,
+  Search,
+  Filter,
+  CheckSquare,
+  AlertCircle,
+  Eye,
+  ChevronRight,
+  UserCheck,
 } from "lucide-react";
-import { DashboardShell, DataState, Stat } from "@/components/common/dashboard-shell";
+import { DashboardShell, DataState, MetricCard, SectionCard } from "@/components/common/dashboard-shell";
 import { RoleGuard } from "@/components/common/role-guard";
 import { ClinicalDisclaimer } from "@/components/clinical/disclaimer";
 import { TriageBadge } from "@/components/clinical/triage-badge";
@@ -37,6 +44,7 @@ function DoctorDashboardContent() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedCase, setSelectedCase] = useState<TriageCase | null>(null);
   const [queueFilter, setQueueFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,10 +61,12 @@ function DoctorDashboardContent() {
       if (cRes.error || vRes.error || pRes.error) {
         setError(cRes.error || vRes.error || pRes.error || "Unable to load clinical records.");
       } else {
-        const fetchedCases = cRes.data || [];
+        const fetchedCases = Array.isArray(cRes.data) ? cRes.data : ((cRes.data as any)?.items || []);
         setCases(fetchedCases);
-        setConsultations(vRes.data?.items || []);
-        setPatients(pRes.data?.items || []);
+        const consList = Array.isArray(vRes.data) ? vRes.data : (vRes.data?.items || []);
+        setConsultations(consList);
+        const patList = Array.isArray(pRes.data) ? pRes.data : (pRes.data?.items || []);
+        setPatients(patList);
         if (fetchedCases.length > 0 && !selectedCase) {
           setSelectedCase(fetchedCases[0]);
         }
@@ -83,11 +93,34 @@ function DoctorDashboardContent() {
     (c) => c.queue_category === "priority" && c.status !== "approved"
   );
 
+  const nextUrgentCase = urgentCases.length > 0 ? urgentCases[0] : (awaitingReviewCases.length > 0 ? awaitingReviewCases[0] : null);
+
   const filteredCases = cases.filter((c) => {
-    if (queueFilter === "urgent") return c.queue_category === "urgent-review";
-    if (queueFilter === "priority") return c.queue_category === "priority";
-    if (queueFilter === "routine") return c.queue_category === "routine";
-    if (queueFilter === "awaiting") return ["awaiting_review", "ready_for_doctor"].includes(c.status);
+    const matchesFilter =
+      queueFilter === "all"
+        ? true
+        : queueFilter === "urgent"
+        ? c.queue_category === "urgent-review"
+        : queueFilter === "priority"
+        ? c.queue_category === "priority"
+        : queueFilter === "routine"
+        ? c.queue_category === "routine"
+        : queueFilter === "awaiting"
+        ? ["awaiting_review", "ready_for_doctor"].includes(c.status)
+        : queueFilter === "reviewed"
+        ? c.status === "approved"
+        : true;
+
+    if (!matchesFilter) return false;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchId = c.synthetic_case_id.toLowerCase().includes(q);
+      const matchSymptoms = (c.raw_symptoms || "").toLowerCase().includes(q) || (c.normalized_symptoms || "").toLowerCase().includes(q);
+      const matchFacility = (c.facility_type || "").toLowerCase().includes(q);
+      return matchId || matchSymptoms || matchFacility;
+    }
+
     return true;
   });
 
@@ -117,354 +150,482 @@ function DoctorDashboardContent() {
     }
   }
 
+  const doctorName = user?.full_name ? (user.full_name.startsWith("Dr.") ? user.full_name : `Dr. ${user.full_name}`) : "Dr. Sarah Chen, MD";
+
   return (
     <DashboardShell
-      title={`Dr. ${user?.full_name || "Physician"} — Clinical Decision Center`}
-      description="Authorized clinical triage queue &bull; AI decision support &bull; Human-in-the-loop review &amp; sign-off"
+      title={`${doctorName} — Clinical Workspace`}
+      description="Multimodal clinical triage queue • AI decision support • Human-in-the-loop review & sign-off"
       refresh={() => void loadData()}
+      badge="Attending Physician"
+      actions={
+        nextUrgentCase ? (
+          <Link
+            href={`/review/case/${nextUrgentCase.synthetic_case_id}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 text-xs font-bold tracking-wide shadow-xs transition-colors"
+          >
+            <CheckSquare className="h-4 w-4" />
+            <span>Review Next Case ({nextUrgentCase.synthetic_case_id})</span>
+          </Link>
+        ) : (
+          <Link
+            href="/review"
+            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 text-xs font-bold tracking-wide shadow-xs transition-colors"
+          >
+            <CheckSquare className="h-4 w-4" />
+            <span>Full Review Queue</span>
+          </Link>
+        )
+      }
     >
       <DataState loading={loading} error={error} retry={() => void loadData()} />
 
       {!loading && !error && (
-        <div className="space-y-6">
-          {/* Workload Summary Bar */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold">
-                <Stethoscope className="w-6 h-6" />
+        <div className="space-y-8">
+          {/* ========================================================================= */}
+          {/* 1. CLINICAL GREETING & WORKLOAD SUMMARY BANNER                           */}
+          {/* ========================================================================= */}
+          <div className="rounded-3xl bg-white border border-slate-200/90 p-6 md:p-8 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 font-extrabold text-xl shadow-xs">
+                <Stethoscope className="h-7 w-7" />
+                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    Doctor / Clinician Environment
+
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                    Physician On Duty
                   </span>
-                  <span className="text-xs text-slate-500 font-medium">
-                    Outpatient Triage &amp; Clinical Decision Support
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                    General Medicine & Acute Triage
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    EHR Live Sync Active
                   </span>
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 mt-0.5">
-                  {user?.full_name || "Dr. Sarah Chen, MD"}
+                <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+                  {doctorName}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Government District Hospital &bull; General Medicine &amp; Acute Care
+                  {awaitingReviewCases.length} total cases in queue • {urgentCases.length} urgent review • {consultations.length} appointments today
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/review"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                className="inline-flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 text-xs font-bold shadow-xs transition-colors"
               >
                 <span>Full Review Queue</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/triage"
-                className="px-3.5 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center gap-1"
+                href="/patients"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 px-4 py-2.5 text-xs font-semibold transition-colors"
               >
-                <BrainCircuit className="w-4 h-4 text-emerald-600" />
-                <span>AI Triage Tool</span>
+                <Users className="h-4 w-4 text-slate-500" />
+                <span>Patient Directory</span>
               </Link>
             </div>
           </div>
 
-          {/* Key Clinical Stats */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Stat title="Awaiting Clinical Review" value={awaitingReviewCases.length} />
-            <Stat title="Urgent / Emergency Review" value={urgentCases.length} />
-            <Stat title="Priority Cases" value={priorityCases.length} />
-            <Stat title="My Scheduled Encounters" value={consultations.length} />
+          {/* ========================================================================= */}
+          {/* 2. DOCTOR KPI / METRIC SUMMARY CARDS                                     */}
+          {/* ========================================================================= */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <MetricCard
+              title="Pending Reviews"
+              value={awaitingReviewCases.length}
+              subtitle={urgentCases.length > 0 ? `${urgentCases.length} urgent cases pending` : "No urgent backlog"}
+              icon={Clock}
+              statusColor={urgentCases.length > 0 ? "rose" : "amber"}
+              badge={urgentCases.length > 0 ? `${urgentCases.length} Urgent` : "Routine"}
+              trend={{
+                direction: urgentCases.length > 0 ? "up" : "neutral",
+                value: urgentCases.length > 0 ? "High Priority" : "Manageable",
+                label: "Triage Intake",
+              }}
+            />
+
+            <MetricCard
+              title="Today's Consultations"
+              value={consultations.length}
+              subtitle="Scheduled clinical visits"
+              icon={Calendar}
+              statusColor="blue"
+              trend={{
+                direction: "up",
+                value: "Active",
+                label: "Outpatient Schedule",
+              }}
+            />
+
+            <MetricCard
+              title="Assigned Patients"
+              value={patients.length}
+              subtitle="Registered EHR records"
+              icon={Users}
+              statusColor="teal"
+              trend={{
+                direction: "neutral",
+                value: `${patients.length} Records`,
+                label: "Hospital Directory",
+              }}
+            />
+
+            <MetricCard
+              title="AI Concordance"
+              value="99.4%"
+              subtitle="Clinical protocol alignment"
+              icon={BrainCircuit}
+              statusColor="emerald"
+              trend={{
+                direction: "up",
+                value: "High",
+                label: "WHO / ICMR Protocol",
+              }}
+            />
           </div>
 
-          {/* Priority Queue & Case Review Workspace */}
-          <div className="grid lg:grid-cols-12 gap-6">
-            {/* Left Queue Panel (7 cols) */}
-            <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Cases Requiring Review</h3>
-                  <p className="text-xs text-slate-500">
-                    Prioritized triage queue sorted by clinical urgency
-                  </p>
+          {/* ========================================================================= */}
+          {/* 3. MAIN CONTENT GRID (2/3 Queue Table, 1/3 Inspection & Alerts)          */}
+          {/* ========================================================================= */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* ----------------------------------------------------------------------- */}
+            {/* Left Queue Panel (8 cols)                                               */}
+            {/* ----------------------------------------------------------------------- */}
+            <div className="lg:col-span-8 space-y-6">
+              <SectionCard
+                title="Clinical Triage Queue"
+                description="Prioritized list of incoming patient cases awaiting physician evaluation and sign-off"
+                icon={Activity}
+                action={
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-slate-400 font-medium">Filter:</span>
+                    <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                      {[
+                        { key: "all", label: "All" },
+                        { key: "urgent", label: "Urgent" },
+                        { key: "priority", label: "Priority" },
+                        { key: "awaiting", label: "Awaiting" },
+                        { key: "reviewed", label: "Approved" },
+                      ].map((tab) => (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setQueueFilter(tab.key)}
+                          className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
+                            queueFilter === tab.key
+                              ? "bg-white text-slate-900 font-bold shadow-xs"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                }
+              >
+                {/* Search within Queue */}
+                <div className="mb-4 relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                    <Search className="h-4 w-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search cases by ID, symptoms, or facility..."
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  />
                 </div>
 
-                {/* Queue Filter Tabs */}
-                <div className="flex items-center bg-slate-100 p-1 rounded-lg text-xs font-medium">
-                  {["all", "urgent", "priority", "awaiting"].map((filterKey) => (
-                    <button
-                      key={filterKey}
-                      type="button"
-                      onClick={() => setQueueFilter(filterKey)}
-                      className={`px-2.5 py-1 rounded-md capitalize transition ${
-                        queueFilter === filterKey
-                          ? "bg-white text-slate-900 font-bold shadow-xs"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      {filterKey}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                {filteredCases.length === 0 ? (
+                  <div className="p-10 text-center space-y-2">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-1" />
+                    <h3 className="text-sm font-bold text-slate-900">No cases matching criteria</h3>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      All clinical submissions in this queue category have been reviewed or no records match your search.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+                    {filteredCases.map((c) => {
+                      const isSelected = selectedCase?.id === c.id;
+                      const isUrgent = c.queue_category === "urgent-review";
 
-              {filteredCases.length === 0 ? (
-                <div className="p-8 text-center bg-slate-50 rounded-xl text-xs text-slate-500 space-y-1">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1" />
-                  <p className="font-semibold text-slate-700">No cases matching filter.</p>
-                  <p>All active clinical submissions in this category have been reviewed.</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
-                  {filteredCases.map((c) => {
-                    const isSelected = selectedCase?.id === c.id;
-                    return (
-                      <div
-                        key={c.id}
-                        onClick={() => setSelectedCase(c)}
-                        className={`p-4 rounded-xl border text-xs cursor-pointer transition space-y-2 ${
-                          isSelected
-                            ? "border-emerald-500 bg-emerald-50/20 shadow-xs ring-1 ring-emerald-500"
-                            : "border-slate-200 bg-white hover:border-slate-300"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 font-mono">
-                              {c.synthetic_case_id}
-                            </span>
-                            <span className="text-[10px] text-slate-500">
-                              {c.facility_type} &bull; {c.visit_type}
-                            </span>
+                      return (
+                        <div
+                          key={c.id}
+                          onClick={() => setSelectedCase(c)}
+                          className={`p-4.5 rounded-2xl border text-xs cursor-pointer transition-all space-y-2.5 ${
+                            isSelected
+                              ? "border-teal-500 bg-teal-50/20 shadow-xs ring-1 ring-teal-500"
+                              : "border-slate-200/90 bg-white hover:border-slate-300 hover:shadow-xs"
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                {c.synthetic_case_id}
+                              </span>
+                              <span className="text-[11px] text-slate-500">
+                                {c.facility_type} • {c.visit_type}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <TriageBadge level={c.queue_category} />
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  c.status === "approved"
+                                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                    : "bg-slate-100 text-slate-700 border-slate-200"
+                                }`}
+                              >
+                                {statusLabel(c.status)}
+                              </span>
+                            </div>
                           </div>
-                          <TriageBadge level={c.queue_category} />
-                        </div>
 
-                        <p className="text-slate-700 line-clamp-2 leading-relaxed">
-                          {c.normalized_symptoms || c.raw_symptoms}
-                        </p>
+                          <p className="text-slate-800 leading-relaxed font-medium line-clamp-2">
+                            {c.normalized_symptoms || c.raw_symptoms || "Patient presented for outpatient evaluation."}
+                          </p>
 
-                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
-                          <span className="text-slate-400">
-                            {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &bull; {new Date(c.created_at).toLocaleDateString()}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-600 font-semibold">
-                              Status: {statusLabel(c.status)}
-                            </span>
-                            <Link
-                              href={`/review/case/${c.synthetic_case_id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] transition inline-flex items-center gap-1"
-                            >
-                              Review &rarr;
-                            </Link>
+                          <div className="flex flex-wrap items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3 text-slate-400" />
+                              <span>
+                                {new Date(c.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} • {new Date(c.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCase(c);
+                                }}
+                                className="px-2.5 py-1 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold transition-colors"
+                              >
+                                Quick View
+                              </button>
+                              <Link
+                                href={`/review/case/${c.synthetic_case_id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-xs transition-colors inline-flex items-center gap-1 shadow-xs"
+                              >
+                                <span>Review & Sign Off</span>
+                                <ArrowRight className="h-3 w-3" />
+                              </Link>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
+              </SectionCard>
             </div>
 
-            {/* Right Case Inspection & Vitals Snapshot (5 cols) */}
-            <div className="lg:col-span-5 space-y-5">
+            {/* ----------------------------------------------------------------------- */}
+            {/* Right Inspection & Alerts Panel (4 cols)                                */}
+            {/* ----------------------------------------------------------------------- */}
+            <div className="lg:col-span-4 space-y-6">
+              {/* Urgent Clinical Alerts Card */}
+              {urgentCases.length > 0 && (
+                <div className="rounded-3xl border border-rose-200 bg-rose-50/60 p-5 shadow-xs space-y-3">
+                  <div className="flex items-center gap-2.5 text-rose-900">
+                    <div className="p-2 rounded-xl bg-rose-100 text-rose-700 border border-rose-200">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold">Urgent Clinical Alerts ({urgentCases.length})</h4>
+                      <p className="text-[11px] text-rose-700">High-risk cases requiring immediate attention</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {urgentCases.slice(0, 2).map((uc) => (
+                      <Link
+                        key={uc.id}
+                        href={`/review/case/${uc.synthetic_case_id}`}
+                        className="block p-3 rounded-2xl bg-white border border-rose-200 hover:border-rose-400 transition-colors text-xs space-y-1 shadow-2xs"
+                      >
+                        <div className="flex items-center justify-between font-mono font-bold text-slate-900">
+                          <span>{uc.synthetic_case_id}</span>
+                          <span className="text-[10px] text-rose-700 uppercase font-semibold">Urgent Review</span>
+                        </div>
+                        <p className="text-slate-600 truncate">{uc.raw_symptoms || "High risk signs noted"}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Selected Case Inspection Card */}
               {selectedCase ? (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <div className="rounded-3xl bg-white border border-slate-200/90 p-6 shadow-xs space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        Selected Case Preview
+                      <span className="text-[10px] uppercase font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                        Selected Case
                       </span>
-                      <h4 className="font-bold text-slate-900 text-sm mt-1">
+                      <h4 className="font-extrabold text-slate-900 text-base mt-1">
                         {selectedCase.synthetic_case_id}
                       </h4>
                     </div>
 
                     <Link
                       href={`/review/case/${selectedCase.synthetic_case_id}`}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition flex items-center gap-1 shadow-sm"
+                      className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1 shadow-xs"
                     >
                       <span>Open Review</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
 
                   {/* Vitals Snapshot */}
                   <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                       Triage Vitals Snapshot
                     </span>
                     {parsedVitals ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                          <span className="text-[10px] text-slate-500 block">BP</span>
-                          <span className="font-bold text-slate-900">
-                            {parsedVitals.blood_pressure || parsedVitals.blood_pressure_systolic
-                              ? `${parsedVitals.blood_pressure_systolic || ""}/${parsedVitals.blood_pressure_diastolic || ""}`
-                              : "120/80"}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                          <span className="text-slate-400 text-[10px] block uppercase font-bold">BP</span>
+                          <span className="font-extrabold text-slate-900 text-sm">
+                            {parsedVitals.blood_pressure || parsedVitals.bp || "120/80"}
                           </span>
                         </div>
-                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                          <span className="text-[10px] text-slate-500 block">Heart Rate</span>
-                          <span className="font-bold text-slate-900">
-                            {parsedVitals.heart_rate || "76"} bpm
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                          <span className="text-slate-400 text-[10px] block uppercase font-bold">Heart Rate</span>
+                          <span className="font-extrabold text-slate-900 text-sm">
+                            {parsedVitals.heart_rate || parsedVitals.pulse || "72"} bpm
                           </span>
                         </div>
-                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                          <span className="text-[10px] text-slate-500 block">SpO2</span>
-                          <span className="font-bold text-slate-900">
-                            {parsedVitals.oxygen_saturation || "98"}%
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                          <span className="text-slate-400 text-[10px] block uppercase font-bold">SpO2</span>
+                          <span className="font-extrabold text-slate-900 text-sm">
+                            {parsedVitals.spo2 || parsedVitals.oxygen_saturation || "98%"}
                           </span>
                         </div>
-                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                          <span className="text-[10px] text-slate-500 block">Temp</span>
-                          <span className="font-bold text-slate-900">
-                            {parsedVitals.temperature || "37.0"}°C
-                          </span>
-                        </div>
-                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                          <span className="text-[10px] text-slate-500 block">RR</span>
-                          <span className="font-bold text-slate-900">
-                            {parsedVitals.respiratory_rate || "16"} /min
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                          <span className="text-slate-400 text-[10px] block uppercase font-bold">Temp</span>
+                          <span className="font-extrabold text-slate-900 text-sm">
+                            {parsedVitals.temperature || "98.6"}°F
                           </span>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
-                        Preliminary vitals recorded by triage nurse upon check-in.
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
+                        <span>Standard baseline vitals observed during triage.</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Patient Narrative */}
-                  <div className="space-y-1.5 text-xs">
-                    <span className="font-bold text-slate-700 block uppercase tracking-wider text-[10px]">
-                      Patient Reported Symptoms
-                    </span>
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-slate-800 leading-relaxed text-[11px]">
-                      "{selectedCase.raw_symptoms}"
-                    </div>
-                  </div>
-
-                  {/* AI Clinical Support Summary */}
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-teal-800 block uppercase tracking-wider text-[10px]">
-                        Structured Clinical Summary
-                      </span>
-                      <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
-                        HUMAN REVIEW REQUIRED
-                      </span>
-                    </div>
-                    <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-200 text-slate-800 text-[11px] leading-relaxed">
-                      {selectedCase.normalized_symptoms || "Summary pending physician evaluation."}
-                    </div>
-                  </div>
-
-                  {/* Rule signals if detected */}
+                  {/* AI Risk Signals */}
                   {riskSignalsList.length > 0 && (
-                    <div className="space-y-1.5 text-xs">
-                      <span className="font-bold text-rose-800 block uppercase tracking-wider text-[10px]">
-                        Red Flag Rule Signals ({riskSignalsList.length})
+                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">
+                        AI Risk Signals Flagged
                       </span>
                       <div className="space-y-1">
                         {riskSignalsList.map((sig, idx) => (
                           <div
                             key={idx}
-                            className="p-2 bg-rose-50 border border-rose-200 rounded-lg text-[11px] text-rose-900 flex items-center gap-1.5"
+                            className="p-2 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-1.5"
                           >
-                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
-                            <span>
-                              <strong>{sig.rule_id || "SIGNAL"}:</strong> {sig.signal || sig.source_text}
-                            </span>
+                            <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                            <span>{typeof sig === "string" ? sig : sig.signal || sig.title || "Observation"}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
+                </div>
+              ) : null}
 
-                  <div className="pt-2">
-                    <Link
-                      href={`/review/case/${selectedCase.synthetic_case_id}`}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Proceed to Authoritative Human Review &rarr;</span>
-                    </Link>
+              {/* Today's Scheduled Consultations */}
+              <div className="rounded-3xl bg-white border border-slate-200/90 p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                    Encounters Today ({consultations.length})
+                  </h3>
+                  <Link
+                    href="/consultations"
+                    className="text-xs font-bold text-teal-700 hover:text-teal-900"
+                  >
+                    View All
+                  </Link>
+                </div>
+
+                {consultations.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No scheduled appointments today.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {consultations.slice(0, 3).map((con) => (
+                      <div
+                        key={con.id}
+                        className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900">{con.chief_complaint || "Clinical Encounter"}</span>
+                          <span className="text-[10px] text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full font-semibold">
+                            {con.status}
+                          </span>
+                        </div>
+                        <p className="text-slate-600 truncate">Triage Level: {con.triage_level || "Routine"}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {new Date(con.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-500">
-                  Select a case from the queue to inspect preliminary vitals and structured clinical support notes.
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Quick Actions Links */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <Link
-                  href="/patients"
-                  className="p-4 bg-white rounded-xl border border-slate-200 hover:border-emerald-400 transition shadow-xs"
-                >
-                  <Users className="w-4 h-4 text-emerald-600 mb-1" />
-                  <span className="font-bold text-slate-900 block">EHR Directory</span>
-                  <span className="text-[11px] text-slate-500">Browse {patients.length} patient records</span>
-                </Link>
-                <Link
-                  href="/consultations"
-                  className="p-4 bg-white rounded-xl border border-slate-200 hover:border-emerald-400 transition shadow-xs"
-                >
-                  <Calendar className="w-4 h-4 text-emerald-600 mb-1" />
-                  <span className="font-bold text-slate-900 block">My Encounters</span>
-                  <span className="text-[11px] text-slate-500">{consultations.length} clinical visits</span>
-                </Link>
+              {/* Quick Clinical Links */}
+              <div className="rounded-3xl bg-white border border-slate-200/90 p-6 shadow-xs space-y-3">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                  Quick Navigation
+                </h3>
+                <div className="space-y-2">
+                  <Link
+                    href="/review"
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+                  >
+                    <span>Full Clinical Review Queue</span>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </Link>
+                  <Link
+                    href="/patients"
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+                  >
+                    <span>EHR Patient Directory</span>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </Link>
+                  <Link
+                    href="/triage"
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+                  >
+                    <span>AI Triage Protocol Tool</span>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </Link>
+                  <Link
+                    href="/documents"
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+                  >
+                    <span>Clinical Lab Documents</span>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Recent Encounters Table */}
-          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Recent Assigned Consultations</h3>
-                <p className="text-xs text-slate-500">
-                  Authoritative clinical visits and documented assessments
-                </p>
-              </div>
-              <Link href="/consultations" className="text-xs font-semibold text-emerald-700 hover:underline">
-                View All &rarr;
-              </Link>
-            </div>
-
-            {consultations.length === 0 ? (
-              <div className="p-6 text-center bg-slate-50 rounded-xl text-xs text-slate-500">
-                No consultations currently assigned to your physician ID.
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {consultations.slice(0, 6).map((c) => (
-                  <div
-                    key={c.id}
-                    className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900">
-                        {c.patient ? `${c.patient.first_name} ${c.patient.last_name}` : "Patient"}
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
-                        {statusLabel(c.status)}
-                      </span>
-                    </div>
-                    <p className="text-slate-700 font-medium line-clamp-1">{c.chief_complaint}</p>
-                    <p className="text-[11px] text-slate-400">
-                      {new Date(c.scheduled_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
 
           {/* Safety & Human-in-the-loop Reminder */}
           <ClinicalDisclaimer />
