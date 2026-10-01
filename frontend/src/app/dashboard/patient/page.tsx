@@ -556,21 +556,37 @@ function PatientDashboardContent() {
 
               {/* AI Voice Assistant Promo Card */}
               <div className="rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 shadow-md space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 text-teal-400 border border-teal-400/30">
-                    <Mic className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white">Voice-First AI Assistant</h4>
-                    <span className="text-[10px] text-teal-300 font-medium">Real-Time Medical Help</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 text-teal-400 border border-teal-400/30">
+                      <Mic className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Voice-First AI Assistant</h4>
+                      <span className="text-[10px] text-teal-300 font-medium">Real-Time Medical Help</span>
+                    </div>
                   </div>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Need assistance? Tap the floating microphone in the bottom corner to describe your symptoms or ask clinical questions naturally in English, Hindi, Tamil, or your native language.
+                  Describe your symptoms or ask clinical questions hands-free in English, Hindi, Odia, Bengali, Tamil, or Telugu. The assistant listens naturally and speaks back in your chosen language.
                 </p>
-                <div className="flex items-center gap-2 pt-1 text-[11px] text-teal-400 font-semibold">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Multilingual Speech & Auto-Language Detection</span>
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1.5 text-[11px] text-teal-400 font-semibold">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Hands-Free Auto Turn-Taking</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("clinova-open-voice-assistant"));
+                      }
+                    }}
+                    className="px-3.5 py-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <Mic className="w-3.5 h-3.5" />
+                    <span>Start Voice Assistant</span>
+                  </button>
                 </div>
               </div>
 
