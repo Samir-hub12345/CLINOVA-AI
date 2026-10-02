@@ -64,8 +64,11 @@ CLINOVA-AI/
 ├── API_SPECIFICATION.md      # Authoritative REST API endpoint specification
 ├── deploy.md                 # Production deployment & operations manual
 ├── CONTRIBUTING.md           # This contributor handbook
-├── CHANGELOG.md              # Semantic release history & status matrix
-├── docker-compose.yml        # Multi-container orchestration (backend, frontend, db, redis)
+├── scripts/
+│   ├── clinova.ps1           # Master native Windows PowerShell orchestrator (start, stop, doctor)
+│   ├── backup_db.ps1         # Automated database backup utility
+│   └── verify_restore.ps1    # Backup restore and integrity verification
+├── docker-compose.yml        # Local Docker Compose deprecated (use infrastructure/docker/ for prod)
 │
 ├── backend/                  # FastAPI Application Service
 │   ├── app/
@@ -316,67 +319,57 @@ Open your browser and visit:
 
 ---
 
-## 8. Database & Services Setup (Docker)
+## 8. Native Windows Orchestration & Local Stack
 
-Clinova AI uses PostgreSQL 16 for structured data (patients, consultations, triage cases, audit logs) and Redis 7 for cache and queue state.
+Clinova AI runs natively on Windows using PowerShell orchestration.
 
-### Option A: Run Only Database & Redis in Docker (Recommended for Local Dev)
-If you prefer running the backend and frontend directly in your local terminal for faster hot-reloading, start only the backing services:
+### One-Command Local Startup (Recommended)
+
+Start the entire local development stack (Backend + Frontend + PostgreSQL/SQLite + Redis) with a single PowerShell command:
 
 ```powershell
 # From the project root
-docker compose up -d db redis
+.\scripts\clinova.ps1 start
 ```
 
-- **PostgreSQL**: Bound to `localhost:5432` (User: `postgres`, Password: `postgres`, DB: `clinova`)
-- **Redis**: Bound to `localhost:6379`
-
-To inspect running containers:
+Or start and automatically open the application in your default browser:
 ```powershell
-docker compose ps
+.\scripts\clinova.ps1 start -Open
 ```
 
-To view database logs:
+- **PostgreSQL**: Bound to `localhost:5432` (or zero-install SQLite fallback via `DATABASE_URL`)
+- **Redis**: Bound to `localhost:6379` (or graceful in-memory fallback)
+- **FastAPI Backend**: Bound to `http://localhost:8000` (Swagger docs: `/docs`)
+- **Next.js Frontend**: Bound to `http://localhost:3000`
+
+To inspect running services, ports, and health status:
 ```powershell
-docker compose logs -f db
+.\scripts\clinova.ps1 status
 ```
 
-To stop the services:
+To view live application logs:
 ```powershell
-docker compose down
+.\scripts\clinova.ps1 logs
+```
+
+To stop all services:
+```powershell
+.\scripts\clinova.ps1 stop
 ```
 
 ---
 
-## 9. Running the Full Application
+## 9. Developer Commands Reference
 
-### Option B: One-Command Startup with Docker Compose
-If you want to run the entire stack (Backend + Frontend + PostgreSQL + Redis) without installing local Python or Node environments:
-
-```powershell
-# From the project root
-docker compose up --build
-```
-
-### Service Map & URL Reference
-
-| Service | Container Name | Local URL / Port | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Frontend Web App** | `clinova-frontend` | [http://localhost:3000](http://localhost:3000) | Patient intake wizard, clinician triage queue, and referral viewer |
-| **Backend API** | `clinova-backend` | [http://localhost:8000](http://localhost:8000) | REST API, AI provider logic, and risk calculation engine |
-| **API Interactive Docs** | `clinova-backend` | [http://localhost:8000/docs](http://localhost:8000/docs) | Swagger UI for exploring and testing API endpoints |
-| **PostgreSQL Database**| `clinova-db` | `localhost:5432` | Relational clinical records, triage cases, and audit trails |
-| **Redis Cache** | `clinova-redis` | `localhost:6379` | Fast key-value cache and queue management |
-
-To stop all containers:
-```powershell
-docker compose down
-```
-
-To stop containers and wipe database volumes (clean reset):
-```powershell
-docker compose down -v
-```
+| Task | Command | Description |
+| :--- | :--- | :--- |
+| **First-Time Setup** | `.\scripts\clinova.ps1 setup` | Prepares Python `.venv`, installs requirements, and sets up `.env` |
+| **Start Stack** | `.\scripts\clinova.ps1 start` | Starts all services in dependency order |
+| **Stop Stack** | `.\scripts\clinova.ps1 stop` | Gracefully stops all Clinova processes |
+| **Restart Stack** | `.\scripts\clinova.ps1 restart` | Cleanly restarts all services |
+| **Inspect Status** | `.\scripts\clinova.ps1 status` | Displays process PIDs and port listeners |
+| **System Diagnostics** | `.\scripts\clinova.ps1 doctor` | Diagnoses missing tools, ports, and configuration |
+| **Health Probe** | `.\scripts\clinova.ps1 health` | Evaluates backend readiness and component latencies |
 
 ---
 
@@ -389,23 +382,19 @@ When contributing a feature or bug fix, follow this typical daily routine:
    git checkout main
    git pull origin main
    ```
-2. **Start Backing Services**:
+2. **Start Clinova Stack**:
    ```powershell
-   docker compose up -d db redis
+   .\scripts\clinova.ps1 start
    ```
-3. **Start Backend with Hot Reloading**:
+3. **Develop and Test**: Make code changes; frontend features hot-reload in Next.js, and backend updates apply via Uvicorn.
+4. **Execute Automated Tests**: Run pytest and linting before staging changes:
    ```powershell
-   cd backend
-   .\.venv\Scripts\Activate.ps1
-   uvicorn app.main:app --reload --port 8000
+   .\.venv\Scripts\python.exe -m pytest backend/tests -v
    ```
-4. **Start Frontend with Fast Refresh**:
+5. **Stop Stack When Done**:
    ```powershell
-   cd frontend
-   npm run dev
+   .\scripts\clinova.ps1 stop
    ```
-5. **Develop and Test**: Make code changes and verify live changes in the browser.
-6. **Execute Automated Tests**: Run pytest and linting before staging changes.
 
 ---
 

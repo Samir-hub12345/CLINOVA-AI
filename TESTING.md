@@ -113,31 +113,25 @@ tests/test_health.py::test_health_check_endpoint PASSED                  [100%]
 
 ---
 
-## 5. Full Integration Testing (Docker Backed)
+## 5. Full Integration Testing (Native Windows / Self-Contained)
 
-For tests involving PostgreSQL EHR persistence, authentication, and audit trails:
+The backend test suite is completely self-contained. When running locally on Windows, tests automatically utilize an in-memory asynchronous SQLite engine (`aiosqlite`) with isolated database schemas, or your local native PostgreSQL instance if `DATABASE_URL` is configured:
 
-### Step 1: Start Backing Services
-```bash
-# From project root
-docker compose up -d db redis
-```
+### Running the Complete Pytest Suite
+```powershell
+# From project root using the managed virtual environment:
+.\.venv\Scripts\python.exe -m pytest backend/tests -v
 
-### Step 2: Run Complete Pytest Suite
-```bash
-# Windows PowerShell
+# Or from the backend directory:
 cd backend
 python -m pytest -v
-
-# macOS / Linux
-cd backend
-pytest -v
 ```
 
-### Step 3: Run In-Container (Alternative)
-```bash
-# Run tests directly inside the running backend container
-docker compose exec backend pytest -v
+### Full Integration Diagnostics
+To verify your live native Windows stack before running end-to-end integration tests:
+```powershell
+.\scripts\clinova.ps1 doctor
+.\scripts\clinova.ps1 health
 ```
 
 ---

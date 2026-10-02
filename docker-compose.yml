@@ -1,87 +1,17 @@
-services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: clinova-backend
-    ports:
-      - "8000:8000"
-    environment:
-      - APP_NAME=Clinova AI
-      - ENVIRONMENT=development
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/clinova
-      - REDIS_URL=redis://redis:6379/0
-      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001
-      - STORAGE_LOCAL_DIR=/app/storage_data
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./backend:/app
-      - storage_data:/app/storage_data
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/live')\" || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: clinova-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - WATCHPACK_POLLING=true
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    command: npm run dev
-    depends_on:
-      - backend
-    restart: unless-stopped
-
-  db:
-    image: postgres:16-alpine
-    container_name: clinova-db
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=clinova
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d clinova"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    container_name: clinova-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-  redis_data:
-  storage_data:
+# ==============================================================================
+# CLINOVA AI - LOCAL DOCKER COMPOSE DEPRECATED
+#
+# Local development on Windows has migrated to native PowerShell orchestration:
+#   .\scripts\clinova.ps1 start          # Start all local services
+#   .\scripts\clinova.ps1 start -Open    # Start and open browser
+#   .\scripts\clinova.ps1 stop           # Stop all managed processes
+#   .\scripts\clinova.ps1 status         # Check service and port health
+#   .\scripts\clinova.ps1 doctor         # Diagnose dependencies and ports
+#   .\scripts\clinova.ps1 health         # Probe application readiness
+#   .\scripts\clinova.ps1 logs           # View service logs
+#
+# Docker Desktop, Linux containers, and WSL are NO LONGER REQUIRED for local development.
+#
+# For production/staging server container deployments, use:
+#   docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --build
+# ==============================================================================

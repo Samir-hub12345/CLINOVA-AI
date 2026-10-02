@@ -1,3 +1,13 @@
+# ==============================================================================
+# CLINOVA AI - Backend Container Image (Production Deployment Only)
+#
+# Note: For local Windows development, run natively with PowerShell:
+#   .\scripts\clinova.ps1 start
+#
+# This Dockerfile is used by:
+#   infrastructure/docker/docker-compose.prod.yml
+# ==============================================================================
+
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -22,4 +32,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

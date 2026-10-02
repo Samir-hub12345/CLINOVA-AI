@@ -83,9 +83,9 @@ All services operate on standardized, isolated network ports to eliminate port c
 
 ---
 
-## 3. Container Orchestration (Docker Compose)
+## 3. Container Orchestration (Production Server Deployment)
 
-The multi-container stack is orchestrated via `docker-compose.yml` located at the repository root:
+*Note: For local Windows development, Clinova AI runs natively via PowerShell: `.\scripts\clinova.ps1 start` (see [docs/NATIVE_WINDOWS_MIGRATION.md](docs/NATIVE_WINDOWS_MIGRATION.md)). The containerized multi-service topology below applies to production server deployments using `infrastructure/docker/docker-compose.prod.yml`:*
 
 ```yaml
 version: '3.8'

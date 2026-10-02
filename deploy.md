@@ -213,14 +213,14 @@ The frontend `Dockerfile` implements a high-efficiency multi-stage build using `
 
 ### 7.2 API Endpoint Binding
 During build and runtime, the frontend communicates with the backend via `NEXT_PUBLIC_API_URL`:
-- **Docker Compose (Local):** `http://localhost:8000` (browser directly reaches backend port 8000).
+- **Local Development:** `http://localhost:8000` (browser directly reaches backend port 8000).
 - **Production Domain:** `https://api.triage.districthospital.gov.in`
 
 ---
 
-## 8. Docker Compose Deployment (Recommended)
+## 8. Production Docker Compose Deployment (Server / Cloud)
 
-Docker Compose provides a single-command deployment orchestrating all four microservices.
+*Note: For local Windows development, use native PowerShell orchestration: `.\scripts\clinova.ps1 start` (see [docs/NATIVE_WINDOWS_MIGRATION.md](docs/NATIVE_WINDOWS_MIGRATION.md)). Docker Compose is used for staging and production server environments using `infrastructure/docker/docker-compose.prod.yml`.*
 
 ### 8.1 Initialize Configuration
 From the project root:
@@ -232,10 +232,10 @@ cp .env.example .env
 # (Set SECRET_KEY, CORS_ORIGINS, NEXT_PUBLIC_API_URL)
 ```
 
-### 8.2 Build and Launch Containers
+### 8.2 Build and Launch Production Containers
 ```bash
-# Launch entire stack in detached background mode
-docker compose up -d --build
+# Launch production stack using production compose file
+docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --build
 ```
 
 ### 8.3 Verify Container Status
@@ -487,7 +487,7 @@ docker compose stop backend
 cat /var/backups/clinova_backup.sql | docker compose exec -T db psql -U postgres -d clinova
 
 # Restart backend
-docker compose start backend
+docker compose -f infrastructure/docker/docker-compose.prod.yml start backend
 ```
 
 ### 14.3 Container Image Rollback
@@ -497,7 +497,7 @@ If a newly deployed image introduces an issue:
 git checkout v0.1.0
 
 # Re-build and start previous stable containers
-docker compose up -d --build
+docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --build
 ```
 
 ---

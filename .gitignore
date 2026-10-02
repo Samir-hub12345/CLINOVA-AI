@@ -59,3 +59,4 @@ docker-compose.override.yml
 storage_data/
 scratch/
 backups/
+.clinova/

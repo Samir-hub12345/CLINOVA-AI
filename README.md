@@ -84,11 +84,11 @@ Patient / Kiosk / Health Worker
 
 ## 🛠️ Technology Stack
 
-* **Frontend**: Next.js 14+ (App Router), React 18, TypeScript, Tailwind CSS, Lucide Icons.
+* **Frontend**: Next.js 15+ (App Router), React 18, TypeScript, Tailwind CSS, Lucide Icons.
 * **Backend**: FastAPI (Python 3.12/3.14 on Uvicorn ASGI), Pydantic v2 validation, SQLAlchemy 2.0 (async).
-* **Database & Cache**: PostgreSQL 16 (relational EHR and triage records) & Redis 7 (caching and job state).
-* **AI & Rules Engine**: Modular provider architecture with Gemini API integration and full deterministic local mock fallback (`DEMO_MODE=true`).
-* **Containerization**: Docker & Docker Compose.
+* **Database & Cache**: PostgreSQL 16 (or async SQLite local zero-install mode) & Redis 7 (with graceful in-memory fallback).
+* **AI & Rules Engine**: Modular provider architecture with Google Gemini 2.5 Flash API integration and deterministic local heuristic rule engine fallback (`DEMO_MODE=true`).
+* **Local Orchestration**: Native Windows PowerShell orchestrator (`scripts/clinova.ps1`). Production deployment supports Docker (`infrastructure/docker/docker-compose.prod.yml`).
 
 ---
 
@@ -227,54 +227,50 @@ CLINOVA-AI/
 
 ## ⚡ Quickstart Commands (Windows PowerShell)
 
-### Option 1: One-Command Startup with Docker Compose (Recommended)
+Clinova AI runs natively on Windows using PowerShell orchestration. No Docker Desktop, WSL, or Linux containers are required for local development.
+
+### 🚀 One-Command Native Windows Startup (Recommended)
+
+Start all local services (PostgreSQL/SQLite, Redis, FastAPI Backend, Next.js Frontend):
 
 ```powershell
-docker compose up --build
+.\scripts\clinova.ps1 start
+```
+
+To automatically launch the frontend in your default browser upon startup:
+
+```powershell
+.\scripts\clinova.ps1 start -Open
 ```
 
 Access the services:
 * **Frontend Web App**: [http://localhost:3000](http://localhost:3000)
-* **Backend API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Backend API Docs (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 * **Backend Root Health**: [http://localhost:8000/health](http://localhost:8000/health)
 * **Process Liveness Probe**: [http://localhost:8000/api/v1/health/live](http://localhost:8000/api/v1/health/live)
 * **System Readiness Probe**: [http://localhost:8000/api/v1/health/ready](http://localhost:8000/api/v1/health/ready) *(validates PostgreSQL query + Redis ping)*
 
 ---
 
-### Database Migrations (Alembic Async)
+### 🛠️ Developer Lifecycle & Management Commands
 
-Apply all database schema migrations to head revision:
-
-```powershell
-docker compose exec backend alembic upgrade head
-```
-
-Verify current active migration revision:
-
-```powershell
-docker compose exec backend alembic current
-```
+| Command | Action |
+| :--- | :--- |
+| `.\scripts\clinova.ps1 start` | Start all local services in dependency order |
+| `.\scripts\clinova.ps1 start -Open` | Start services and open frontend in browser |
+| `.\scripts\clinova.ps1 stop` | Gracefully stop all Clinova-managed processes |
+| `.\scripts\clinova.ps1 restart` | Stop and restart the local stack |
+| `.\scripts\clinova.ps1 status` | Display process PIDs, port availability, and health |
+| `.\scripts\clinova.ps1 doctor` | Run comprehensive prerequisite and port diagnostics |
+| `.\scripts\clinova.ps1 health` | Probe live health and latency metrics |
+| `.\scripts\clinova.ps1 logs` | Inspect backend and frontend log streams |
+| `.\scripts\clinova.ps1 setup` | Automated environment setup (venv, pip, npm, .env) |
 
 ---
 
-### Option 2: Local Development Setup
+### 📦 Production Deployment (Docker)
 
-#### Backend Setup
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-#### Frontend Setup
-```powershell
-cd frontend
-npm install
-npm run dev
-```
+For staging/production server deployments with Docker and Nginx, refer to [deploy.md](deploy.md) and [infrastructure/docker/docker-compose.prod.yml](infrastructure/docker/docker-compose.prod.yml).
 
 ---
 

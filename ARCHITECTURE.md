@@ -120,10 +120,10 @@ Every component listed below has been verified against actual repository configu
 - **Deterministic Heuristic Engine:** Native Python rule evaluation (`backend/app/services/risk_engine.py`)
 - **Anonymization Engine:** Native Python regex scrubber (`backend/app/services/anonymizer.py`)
 
-### 4.5 Containerization & Orchestration
-- **Container Engine:** Docker Engine 24+
-- **Orchestration:** Docker Compose v2 (`docker-compose.yml`)
-- **Base Images:** `python:3.12-slim` (Backend), `node:20-alpine` (Frontend multi-stage build)
+### 4.5 Runtime Orchestration & Production Containerization
+- **Local Developer Orchestration (Native Windows):** PowerShell orchestrator (`scripts/clinova.ps1`) managing PostgreSQL/SQLite, Redis/fallback, FastAPI, and Next.js.
+- **Production Container Engine:** Docker Engine 24+ / Docker Compose v2 (`infrastructure/docker/docker-compose.prod.yml`).
+- **Base Images (Production):** `python:3.12-slim` (Backend), `node:20-alpine` (Frontend multi-stage build).
 
 ---
 
@@ -146,8 +146,11 @@ CLINOVA-AI/
 ├── API_SPECIFICATION.md                  # Authoritative REST API endpoint specification
 ├── deploy.md                             # Production deployment & operations manual
 ├── CONTRIBUTING.md                       # Comprehensive contributor guidelines (18 sections)
-├── CHANGELOG.md                          # Release history & implemented vs. planned matrix
-├── docker-compose.yml                    # Multi-service stack (backend, frontend, db, redis)
+├── scripts/                              # Native Windows orchestrator & database maintenance
+│   ├── clinova.ps1                       # Master Windows orchestrator (start, stop, doctor, status)
+│   ├── backup_db.ps1                     # Automated PostgreSQL backup
+│   └── verify_restore.ps1                # Restore verification
+├── docker-compose.yml                    # Local Compose deprecated (use infrastructure/docker/ for prod)
 │
 ├── backend/                              # FastAPI Service
 │   ├── Dockerfile                        # Python 3.12-slim container image

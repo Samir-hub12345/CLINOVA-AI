@@ -1,10 +1,20 @@
+# ==============================================================================
+# CLINOVA AI - Frontend Container Image (Production Deployment Only)
+#
+# Note: For local Windows development, run natively with PowerShell:
+#   .\scripts\clinova.ps1 start
+#
+# This Dockerfile is used by:
+#   infrastructure/docker/docker-compose.prod.yml
+# ==============================================================================
+
 FROM node:20-alpine AS base
 
 # Install dependencies
 FROM base AS deps
 WORKDIR /app
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Rebuild source code only when needed
 FROM base AS builder

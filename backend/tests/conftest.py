@@ -1,5 +1,5 @@
 import os
-# Only default to SQLite if no external DATABASE_URL (e.g. Docker PostgreSQL) is provided.
+# Only default to SQLite if no external DATABASE_URL is provided.
 if "DATABASE_URL" not in os.environ:
     os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["DEBUG"] = "false"
