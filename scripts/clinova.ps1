@@ -635,6 +635,9 @@ function Invoke-ClinovaStart {
         Invoke-ClinovaSetup
     }
     $config = Read-Env $envPath
+    foreach ($k in $config.Keys) {
+        [System.Environment]::SetEnvironmentVariable($k, $config[$k], "Process")
+    }
     $BackendPort  = if ($config["BACKEND_PORT"]) { [int]$config["BACKEND_PORT"] } else { 8000 }
     $FrontendPort = if ($config["FRONTEND_PORT"]) { [int]$config["FRONTEND_PORT"] } else { 3000 }
     $DbUrl        = if ($config["DATABASE_URL"]) { $config["DATABASE_URL"] } else { "postgresql+asyncpg://postgres:postgres@localhost:5432/clinova" }
@@ -667,12 +670,12 @@ function Invoke-ClinovaStart {
         if ($pgOpen -or (Test-Port -Port 5432)) {
             Write-Status "PostgreSQL" "ONLINE" "localhost:5432 ready" "Green"
         } else {
-            Write-Host "  [ERROR] PostgreSQL is not running on localhost:5432." -ForegroundColor Red
-            Write-Host "  Solutions:" -ForegroundColor Yellow
-            Write-Host "    1. Start PostgreSQL: Start-Service postgresql-x64-16" -ForegroundColor Gray
-            Write-Host "    2. Or switch to SQLite in .env: DATABASE_URL=sqlite+aiosqlite:///./clinova-demo.db" -ForegroundColor Gray
-            Write-Error "PostgreSQL dependency check failed. Aborting startup."
-            return
+            Write-Host "  [WARN] PostgreSQL port 5432 is closed. Seamlessly falling back to zero-install SQLite mode..." -ForegroundColor Yellow
+            $isSqlite = $true
+            $DbUrl = "sqlite+aiosqlite:///./clinova-demo.db"
+            $env:DATABASE_URL = $DbUrl
+            [System.Environment]::SetEnvironmentVariable("DATABASE_URL", $DbUrl, "Process")
+            Write-Status "PostgreSQL" "FALLBACK" "Auto-switched to SQLite (clinova-demo.db)" "Cyan"
         }
     }
 
