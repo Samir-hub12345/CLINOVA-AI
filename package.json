@@ -1,0 +1,16 @@
+{
+  "name": "clinova-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Clinova AI - Native Windows Clinical AI Workstation",
+  "scripts": {
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\clinova.ps1 start -Open",
+    "start": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\clinova.ps1 start",
+    "stop": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\clinova.ps1 stop",
+    "restart": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\clinova.ps1 restart -Open",
+    "status": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\clinova.ps1 status",
+    "health": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\clinova.ps1 health",
+    "doctor": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\clinova.ps1 doctor",
+    "setup": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\clinova.ps1 setup"
+  }
+}

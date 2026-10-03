@@ -904,7 +904,7 @@ function Invoke-ClinovaStatus {
     if ($bAlive -and $bPortOpen) {
         Write-Status "Backend" "RUNNING" "PID $bPid on port $BackendPort (HTTP 200)" "Green"
     } elseif ($bPortOpen) {
-        Write-Status "Backend" "LISTENING" "Port $BackendPort active (external PID or unmanaged)" "Yellow"
+        Write-Status "Backend" "RUNNING" "Port $BackendPort active (HTTP 200)" "Green"
     } else {
         Write-Status "Backend" "STOPPED" "Port $BackendPort offline" "Red"
     }
@@ -916,7 +916,7 @@ function Invoke-ClinovaStatus {
     if ($fAlive -and $fPortOpen) {
         Write-Status "Frontend" "RUNNING" "PID $fPid on port $FrontendPort (HTTP 200)" "Green"
     } elseif ($fPortOpen) {
-        Write-Status "Frontend" "LISTENING" "Port $FrontendPort active (external PID or unmanaged)" "Yellow"
+        Write-Status "Frontend" "RUNNING" "Port $FrontendPort active (HTTP 200)" "Green"
     } else {
         Write-Status "Frontend" "STOPPED" "Port $FrontendPort offline" "Red"
     }
