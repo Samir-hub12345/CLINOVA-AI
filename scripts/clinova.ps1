@@ -670,7 +670,8 @@ function Invoke-ClinovaStart {
         if ($pgOpen -or (Test-Port -Port 5432)) {
             Write-Status "PostgreSQL" "ONLINE" "localhost:5432 ready" "Green"
         } else {
-            Write-Host "  [WARN] PostgreSQL port 5432 is closed. Seamlessly falling back to zero-install SQLite mode..." -ForegroundColor Yellow
+            Write-Host "  [WARN] PostgreSQL is not running on localhost:5432." -ForegroundColor Yellow
+            Write-Host "  [AUTO-FALLBACK] Auto-switching to zero-install SQLite mode (clinova-demo.db)..." -ForegroundColor Cyan
             $isSqlite = $true
             $DbUrl = "sqlite+aiosqlite:///./clinova-demo.db"
             $env:DATABASE_URL = $DbUrl
@@ -728,7 +729,8 @@ function Invoke-ClinovaStart {
                 "-m", "uvicorn",
                 "app.main:app",
                 "--host", "127.0.0.1",
-                "--port", "$BackendPort"
+                "--port", "$BackendPort",
+                "--env-file", "$envPath"
             )
             $proc = Start-ServiceProcess -ServiceName "backend" `
                                          -FilePath $venvPy `

@@ -1,6 +1,11 @@
+from pathlib import Path
 from typing import List, Union, Optional
 from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_CURRENT_FILE = Path(__file__).resolve()
+PROJECT_ROOT = _CURRENT_FILE.parents[3]
+BACKEND_ROOT = _CURRENT_FILE.parents[2]
 
 
 class Settings(BaseSettings):
@@ -50,6 +55,7 @@ class Settings(BaseSettings):
     DEMO_MODE: bool = True
     OFFLINE_DEMO: bool = False  # Enabled by the beginner local launch script.
     GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     LLM_PROVIDER: str = "mock"  # "mock", "gemini"
     STT_PROVIDER: str = "local"  # "local", "faster-whisper", "mock"
     OCR_PROVIDER: str = "local"  # "local", "paddleocr", "mock"
@@ -73,7 +79,11 @@ class Settings(BaseSettings):
         return self
 
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env"),
+        env_file=[
+            str(PROJECT_ROOT / ".env"),
+            str(BACKEND_ROOT / ".env"),
+            ".env",
+        ],
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
