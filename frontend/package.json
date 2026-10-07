@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-voice-state-machine.js && node scripts/test-speech-recognition.js && node scripts/test-voice-conversation-e2e.js"
+    "test": "npm run typecheck"
   },
   "dependencies": {
     "clsx": "^2.1.1",

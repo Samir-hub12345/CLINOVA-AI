@@ -1,6 +1,12 @@
+"""CLINOVA AI — Core Configuration.
+
+Continuous Care Intelligence System.
+Non-diagnostic, advisory, human-in-the-loop clinical intelligence workstation.
+"""
+
 from pathlib import Path
-from typing import List, Union, Optional
-from pydantic import AnyHttpUrl, field_validator, model_validator
+from typing import List, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _CURRENT_FILE = Path(__file__).resolve()
@@ -9,34 +15,26 @@ BACKEND_ROOT = _CURRENT_FILE.parents[2]
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=str(PROJECT_ROOT / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # Application Metadata
     APP_NAME: str = "Clinova AI"
-    ENVIRONMENT: str = "development"  # "development", "testing", "staging", "production"
+    APP_VERSION: str = "2.0.0"
+    ENVIRONMENT: str = "development"  # development, testing, staging, production
     DEBUG: bool = True
     API_V1_STR: str = "/api/v1"
-    
-    SECRET_KEY: str = "change-this-in-production-to-a-secure-random-secret"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    
-    # Database & Cache
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/clinova"
-    REDIS_URL: str = "redis://localhost:6379/0"
-    
-    # Object Storage & Documents
-    STORAGE_PROVIDER: str = "local_object_store"  # "local_object_store", "s3", "minio"
-    STORAGE_LOCAL_DIR: str = "storage_data"
-    STORAGE_BUCKET: str = "medical-documents"
-    MAX_FILE_SIZE_BYTES: int = 500 * 1024 * 1024  # 500 MB limit for medical files
-    PRESIGNED_URL_TTL_SECONDS: int = 900  # 15 minutes
-    SCAN_ENABLED: bool = True
-    CLAMAV_HOST: Optional[str] = None
-    CLAMAV_PORT: int = 3310
-    
-    # CORS
+    DEFAULT_FACILITY: str = "Government District Hospital"
+
+    # Network & Hosts
+    BACKEND_HOST: str = "127.0.0.1"
+    BACKEND_PORT: int = 8000
     CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")
@@ -46,64 +44,23 @@ class Settings(BaseSettings):
             if v.startswith("["):
                 import json
                 return json.loads(v)
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, list):
-            return v
-        raise ValueError(v)
+            return [i.strip() for i in v.split(",") if i.strip()]
+        return v
 
-    # AI Configuration & Prototype Settings
+    # Persistence
+    DATABASE_URL: str = "sqlite+aiosqlite:///./clinova-dev.db"
+
+    # Clinical Safety & Operation Flags
     DEMO_MODE: bool = True
-    OFFLINE_DEMO: bool = False  # Enabled by the beginner local launch script.
-    AI_EXTERNAL_ENABLED: bool = False
-    REAL_PATIENT_DATA_EXTERNAL_ALLOWED: bool = False
-    
-    # Phase 2 Designated Providers
-    SARVAM_API_KEY: str = ""
-    SARVAM_STT_MODEL: str = "saaras:v4"
-    SARVAM_TRANSLATION_MODEL: str = "mayura:v1"
-    SARVAM_TTS_MODEL: str = "bulbul:v3"
-    
-    OCR_SPACE_API_KEY: str = ""
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "openai/gpt-oss-120b"
-    
-    # Deprecated / Legacy Provider Flags (kept non-functional for compatibility)
-    GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
-    
-    LLM_PROVIDER: str = "mock"  # "mock", "groq", "local"
-    STT_PROVIDER: str = "local"  # "local", "sarvam", "mock"
-    OCR_PROVIDER: str = "local"  # "local", "ocr_space", "mock"
-    TRANSLATION_PROVIDER: str = "local"  # "local", "sarvam", "mock"
-    TTS_PROVIDER: str = "local"  # "local", "sarvam", "mock"
-    DEFAULT_FACILITY: str = "Government District Hospital"
-    RETENTION_HOURS: int = 24
+    OFFLINE_MODE: bool = True
+    SYNTHETIC_DATA_ONLY: bool = True
+    ANONYMIZATION_ENABLED: bool = True
+    AUDIT_LOGGING_ENABLED: bool = True
+    DATA_RETENTION_HOURS: int = 24
 
-    @model_validator(mode="after")
-    def validate_production_safety(self) -> "Settings":
-        """Ensures production configuration cannot accidentally use insecure development defaults."""
-        if self.ENVIRONMENT.lower() == "production":
-            if self.DEBUG:
-                raise ValueError("FATAL CONFIGURATION ERROR: DEBUG cannot be enabled in production.")
-            if "change-this" in self.SECRET_KEY.lower() or len(self.SECRET_KEY) < 32:
-                raise ValueError(
-                    "FATAL CONFIGURATION ERROR: Insecure SECRET_KEY detected for production environment. "
-                    "A cryptographically strong secret of at least 32 characters is required."
-                )
-            if "localhost" in self.DATABASE_URL or "127.0.0.1" in self.DATABASE_URL:
-                raise ValueError("FATAL CONFIGURATION ERROR: Production DATABASE_URL must not point to localhost.")
-        return self
-
-    model_config = SettingsConfigDict(
-        env_file=[
-            str(PROJECT_ROOT / ".env"),
-            str(BACKEND_ROOT / ".env"),
-            ".env",
-        ],
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        extra="ignore",
-    )
+    # Security
+    SECRET_KEY: str = "clinova-native-dev-secret-key-32chars-minimum-2026!"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
 
 settings = Settings()

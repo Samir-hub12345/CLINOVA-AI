@@ -1,42 +1,54 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+"""CLINOVA AI — Medicolegal Audit Trail Router.
 
-from app.core.deps import get_current_admin
+Provides immutable audit log access for clinical governance,
+accreditation review, and medicolegal verification (DOC-14).
+"""
+
+from fastapi import APIRouter, Depends, Query
+from typing import Optional, List, Dict, Any
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc
+
 from app.db.session import get_db
-from app.models.audit import AuditLog
-from app.models.user import User
-from app.schemas.audit import AuditLogListResponse, AuditLogResponse
+from app.db.models import AuditLog
 
 router = APIRouter()
 
 
-@router.get("", response_model=AuditLogListResponse)
-async def list_audit_logs(
-    action: Optional[str] = Query(None),
-    resource_type: Optional[str] = Query(None),
-    user_email: Optional[str] = Query(None),
-    skip: int = Query(0, ge=0),
+@router.get("/logs", tags=["Audit Trail"])
+async def get_audit_logs(
+    case_id: Optional[str] = None,
+    action: Optional[str] = None,
+    actor_id: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve immutable HIPAA-ready audit access logs (Admins only)."""
-    stmt = select(AuditLog)
+    """Returns immutable medicolegal audit entries."""
+    stmt = select(AuditLog).order_by(desc(AuditLog.timestamp)).limit(limit)
 
+    if case_id:
+        stmt = stmt.where(AuditLog.entity_id == case_id)
     if action:
         stmt = stmt.where(AuditLog.action == action)
-    if resource_type:
-        stmt = stmt.where(AuditLog.resource_type == resource_type)
-    if user_email:
-        stmt = stmt.where(AuditLog.user_email == user_email)
+    if actor_id:
+        stmt = stmt.where(AuditLog.actor_id == actor_id)
 
-    count_stmt = select(func.count()).select_from(stmt.subquery())
-    total = (await db.execute(count_stmt)).scalar_one()
-
-    stmt = stmt.order_by(AuditLog.timestamp.desc()).offset(skip).limit(limit)
     res = await db.execute(stmt)
     logs = res.scalars().all()
 
-    return AuditLogListResponse(total=total, items=list(logs))
+    return {
+        "count": len(logs),
+        "logs": [
+            {
+                "id": log.id,
+                "actor_id": log.actor_id,
+                "action": log.action,
+                "entity_type": log.entity_type,
+                "entity_id": log.entity_id,
+                "details": log.details,
+                "ip_address": log.ip_address,
+                "timestamp": log.timestamp.isoformat(),
+            }
+            for log in logs
+        ],
+    }
