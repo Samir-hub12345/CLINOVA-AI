@@ -26,7 +26,16 @@ import {
   AssistantMessageResponse,
   AssistantToolExecuteRequest,
   AssistantToolExecuteResponse,
+  VerificationRun,
+  VerificationFinding,
+  VerificationConflict,
+  ReviewReadinessSummary,
+  CompletionSession,
+  CompletionQuestion,
+  NextQuestionResponse,
+  SubmitAnswerResponse,
 } from "@/types";
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -728,3 +737,108 @@ export const assistantApi = {
     });
   },
 };
+
+export const verificationApi = {
+  async verifyCase(caseId: string, options?: { force_reverify?: boolean; include_ai_checks?: boolean }): Promise<ApiResponse<VerificationRun>> {
+    return fetchApi<VerificationRun>(`/api/v1/cases/${caseId}/verify`, {
+      method: "POST",
+      body: JSON.stringify({
+        force_reverify: options?.force_reverify ?? false,
+        include_ai_checks: options?.include_ai_checks ?? true,
+      }),
+    });
+  },
+
+  async getLatestVerification(caseId: string): Promise<ApiResponse<VerificationRun>> {
+    return fetchApi<VerificationRun>(`/api/v1/cases/${caseId}/verification`);
+  },
+
+  async listVerificationRuns(caseId: string): Promise<ApiResponse<VerificationRun[]>> {
+    return fetchApi<VerificationRun[]>(`/api/v1/cases/${caseId}/verification/runs`);
+  },
+
+  async getVerificationRun(caseId: string, runId: string): Promise<ApiResponse<VerificationRun>> {
+    return fetchApi<VerificationRun>(`/api/v1/cases/${caseId}/verification/runs/${runId}`);
+  },
+
+  async listFindings(
+    caseId: string,
+    filters?: { run_id?: string; severity?: string; status?: string; category?: string }
+  ): Promise<ApiResponse<VerificationFinding[]>> {
+    const q = new URLSearchParams();
+    if (filters?.run_id) q.set("run_id", filters.run_id);
+    if (filters?.severity) q.set("severity", filters.severity);
+    if (filters?.status) q.set("status", filters.status);
+    if (filters?.category) q.set("category", filters.category);
+    const qs = q.toString() ? `?${q.toString()}` : "";
+    return fetchApi<VerificationFinding[]>(`/api/v1/cases/${caseId}/verification/findings${qs}`);
+  },
+
+  async resolveFinding(
+    caseId: string,
+    findingId: string,
+    payload: { resolution_state?: string; resolution_notes: string }
+  ): Promise<ApiResponse<VerificationFinding>> {
+    return fetchApi<VerificationFinding>(`/api/v1/cases/${caseId}/verification/findings/${findingId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({
+        resolution_state: payload.resolution_state || "RESOLVED_BY_HUMAN_VERIFICATION",
+        resolution_notes: payload.resolution_notes,
+      }),
+    });
+  },
+
+  async getReviewReadiness(caseId: string): Promise<ApiResponse<ReviewReadinessSummary>> {
+    return fetchApi<ReviewReadinessSummary>(`/api/v1/cases/${caseId}/review-readiness`);
+  },
+};
+
+export const completionApi = {
+  async startSession(caseId: string, options?: { max_turns?: number; force_new?: boolean }): Promise<ApiResponse<CompletionSession>> {
+    return fetchApi<CompletionSession>(`/api/v1/cases/${caseId}/completion/start`, {
+      method: "POST",
+      body: JSON.stringify(options || {}),
+    });
+  },
+
+  async getSession(caseId: string): Promise<ApiResponse<CompletionSession>> {
+    return fetchApi<CompletionSession>(`/api/v1/cases/${caseId}/completion/session`);
+  },
+
+  async getNextQuestion(caseId: string): Promise<ApiResponse<NextQuestionResponse>> {
+    return fetchApi<NextQuestionResponse>(`/api/v1/cases/${caseId}/completion/next-question`);
+  },
+
+  async submitAnswer(
+    caseId: string,
+    questionId: string,
+    payload: { raw_answer_text: string; modality?: string; is_skipped?: boolean; structured_payload?: any }
+  ): Promise<ApiResponse<SubmitAnswerResponse>> {
+    return fetchApi<SubmitAnswerResponse>(`/api/v1/cases/${caseId}/completion/questions/${questionId}/answer`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async skipQuestion(
+    caseId: string,
+    questionId: string,
+    payload?: { reason?: string }
+  ): Promise<ApiResponse<SubmitAnswerResponse>> {
+    return fetchApi<SubmitAnswerResponse>(`/api/v1/cases/${caseId}/completion/questions/${questionId}/skip`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    });
+  },
+
+  async completeSession(
+    caseId: string,
+    payload?: { reason?: string }
+  ): Promise<ApiResponse<CompletionSession>> {
+    return fetchApi<CompletionSession>(`/api/v1/cases/${caseId}/completion/complete`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    });
+  },
+};
+

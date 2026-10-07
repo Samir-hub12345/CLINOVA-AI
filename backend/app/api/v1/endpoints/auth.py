@@ -6,10 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import get_current_user, get_current_admin, get_client_ip
+from app.core.deps import get_current_user, get_current_admin, get_client_ip, oauth2_scheme
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.db.session import get_db
 from app.models.user import User, UserRole
+from app.models.revoked_token import RevokedToken
 from app.schemas.user import UserCreate, UserResponse, Token, LoginRequest
 from app.services.audit import AuditService
 
@@ -157,12 +158,46 @@ async def login(
     )
 
 
+@router.post("/logout")
+async def logout(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+):
+    """Invalidate current JWT access token and terminate session server-side."""
+    token_hash = RevokedToken.hash_token(token)
+    stmt = select(RevokedToken).where(RevokedToken.token_hash == token_hash)
+    existing = (await db.execute(stmt)).scalar_one_or_none()
+
+    if not existing:
+        revocation = RevokedToken(
+            token_hash=token_hash,
+            user_id=current_user.id,
+            reason="user_logout",
+        )
+        db.add(revocation)
+        await db.commit()
+
+    await AuditService.log_event(
+        db=db,
+        action="USER_LOGOUT",
+        resource_type="USER",
+        resource_id=current_user.id,
+        user=current_user,
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+        details="User logged out and token invalidated server-side",
+    )
+
+    return {"message": "Logged out successfully. Session invalidated.", "status": "success"}
+
+
 @router.get("/me", response_model=UserResponse)
 async def read_current_user(
     current_user: User = Depends(get_current_user),
 ):
     """Retrieve profile of the currently authenticated user."""
-    return current_user
     return current_user
 
 

@@ -14,90 +14,51 @@ from app.schemas.ai import (
 logger = logging.getLogger("clinova.ai")
 
 
+from app.services.providers.groq_llm import GroqTextGenerationAdapter
+from app.services.providers.local_fallback import LocalTextGenerationProvider
+
+
 class GeminiClinicalService:
+    """Clinical AI decision support service utilizing Groq and deterministic clinical rules."""
+
     def __init__(self):
-        self.api_key = settings.GEMINI_API_KEY
-        self.client = None
-        if not settings.OFFLINE_DEMO and self.api_key and self.api_key.strip():
-            try:
-                from google import genai
-                self.client = genai.Client(api_key=self.api_key)
-                logger.info("Google GenAI client initialized with configured API key.")
-            except Exception as e:
-                logger.warning(f"Could not initialize GenAI Client: {e}. Falling back to clinical rules.")
+        self.local_provider = LocalTextGenerationProvider()
+        self.groq_adapter = GroqTextGenerationAdapter(fallback_provider=self.local_provider)
 
     async def analyze_triage(self, req: TriageRequest) -> TriageResponse:
         """Perform AI-assisted clinical triage and differential diagnosis."""
-        if self.client:
+        if settings.AI_EXTERNAL_ENABLED and self.groq_adapter.is_available():
             try:
-                return await self._call_gemini_triage(req)
+                return await self._call_llm_triage(req)
             except Exception as e:
-                logger.error(f"Gemini API call failed: {e}. Falling back to clinical rule engine.", exc_info=True)
+                logger.error(f"LLM triage call failed: {e}. Falling back to clinical rule engine.", exc_info=True)
                 return self._heuristic_triage(req, note=f"Fallback active: {e}")
         
         return self._heuristic_triage(req)
 
     async def generate_soap_notes(self, req: SOAPGenerateRequest) -> SOAPGenerateResponse:
         """Synthesize clinical encounter notes into formatted SOAP notes."""
-        if self.client:
+        if settings.AI_EXTERNAL_ENABLED and self.groq_adapter.is_available():
             try:
-                return await self._call_gemini_soap(req)
+                return await self._call_llm_soap(req)
             except Exception as e:
-                logger.error(f"Gemini API call failed: {e}. Falling back to clinical rule engine.", exc_info=True)
+                logger.error(f"LLM SOAP call failed: {e}. Falling back to clinical rule engine.", exc_info=True)
                 return self._heuristic_soap(req, note=f"Fallback active: {e}")
 
         return self._heuristic_soap(req)
 
-    async def _call_gemini_triage(self, req: TriageRequest) -> TriageResponse:
-        from google.genai import types
-
-        prompt = f"""
-You are CLINOVA AI, an expert clinical decision support copilot for healthcare providers.
-Analyze the following patient clinical presentation:
-
+    async def _call_llm_triage(self, req: TriageRequest) -> TriageResponse:
+        prompt = f"""Analyze the following patient presentation:
 Chief Complaint: {req.chief_complaint}
-Reported Symptoms: {', '.join(req.symptoms)}
+Symptoms: {', '.join(req.symptoms)}
 Duration: {req.symptom_duration or 'Unspecified'}
-Patient Age: {req.age or 'Unspecified'}, Gender: {req.gender or 'Unspecified'}
-Relevant Medical History: {req.relevant_medical_history or 'None reported'}
-Known Allergies: {req.known_allergies or 'None reported'}
-Vitals: {req.vitals.model_dump_json() if req.vitals else 'No vitals recorded'}
+Age: {req.age or 'Unspecified'}, Gender: {req.gender or 'Unspecified'}
+Vitals: {req.vitals.model_dump_json() if req.vitals else 'None'}
 
-TASK:
-1. Determine Triage Urgency Level: Must be strictly one of ["CRITICAL", "URGENT", "ROUTINE", "LOW"].
-2. Identify any Immediate Emergency Red Flags.
-3. Formulate Top 3 Differential Diagnoses with Probability ("High", "Moderate", "Low"), Clinical Rationale, and Recommended Workup.
-4. Recommend Immediate Clinical Bedside Actions and Suggested Monitoring.
-5. Provide concise Clinical Reasoning.
+Return valid JSON with keys: urgency_level ("CRITICAL"|"URGENT"|"ROUTINE"|"LOW"), urgency_color, emergency_red_flags, differential_diagnoses, immediate_actions, clinical_reasoning, suggested_monitoring."""
 
-Respond strictly in valid JSON matching this schema:
-{{
-  "urgency_level": "CRITICAL" | "URGENT" | "ROUTINE" | "LOW",
-  "urgency_color": "Rose" | "Amber" | "Teal" | "Slate",
-  "emergency_red_flags": ["string"],
-  "differential_diagnoses": [
-    {{
-      "condition": "string",
-      "probability": "High" | "Moderate" | "Low",
-      "rationale": "string",
-      "recommended_workup": ["string"]
-    }}
-  ],
-  "immediate_actions": ["string"],
-  "clinical_reasoning": "string",
-  "suggested_monitoring": ["string"]
-}}
-"""
-        response = self.client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.2,
-            ),
-        )
-
-        data = json.loads(response.text)
+        text_out, meta = await self.groq_adapter.generate(prompt=prompt)
+        data = json.loads(text_out)
         return TriageResponse(
             urgency_level=data.get("urgency_level", "URGENT"),
             urgency_color=data.get("urgency_color", "Amber"),
@@ -106,43 +67,22 @@ Respond strictly in valid JSON matching this schema:
                 DifferentialDiagnosisItem(**item) for item in data.get("differential_diagnoses", [])
             ],
             immediate_actions=data.get("immediate_actions", []),
-            clinical_reasoning=data.get("clinical_reasoning", "Generated by Gemini Clinical Intelligence."),
+            clinical_reasoning=data.get("clinical_reasoning", "Generated by Clinova Clinical Intelligence."),
             suggested_monitoring=data.get("suggested_monitoring", []),
-            source="Gemini 2.5 Flash Clinical Engine",
+            source=f"Clinova Clinical Engine ({meta.model_name or 'Groq'})",
         )
 
-    async def _call_gemini_soap(self, req: SOAPGenerateRequest) -> SOAPGenerateResponse:
-        from google.genai import types
-
-        prompt = f"""
-You are CLINOVA AI, a medical documentation copilot. Synthesize the following encounter information into high-quality clinical SOAP notes:
-
-Patient: {req.patient_name} ({req.age_and_gender or 'Demographics unspecified'})
+    async def _call_llm_soap(self, req: SOAPGenerateRequest) -> SOAPGenerateResponse:
+        prompt = f"""Synthesize clinical encounter into SOAP notes:
+Patient: {req.patient_name}
 Chief Complaint: {req.chief_complaint}
-Clinical Encounter Transcript / Notes:
-{req.encounter_notes}
-Vitals: {req.vitals.model_dump_json() if req.vitals else 'Not recorded'}
-History: {req.medical_history or 'None'}
+Encounter Notes: {req.encounter_notes}
+Vitals: {req.vitals.model_dump_json() if req.vitals else 'None'}
 
-Provide structured JSON with:
-{{
-  "subjective": "Detailed history of present illness and patient reported symptoms",
-  "objective": "Objective findings including vitals and physical exam observations",
-  "assessment": "Clinical synthesis, primary impression, and differential diagnosis",
-  "plan": "Diagnostic plan, therapeutic interventions, medications, and follow-up",
-  "patient_friendly_summary": "Plain English, jargon-free summary for the patient"
-}}
-"""
-        response = self.client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.2,
-            ),
-        )
+Return valid JSON with keys: subjective, objective, assessment, plan, patient_friendly_summary."""
 
-        data = json.loads(response.text)
+        text_out, meta = await self.groq_adapter.generate(prompt=prompt)
+        data = json.loads(text_out)
         return SOAPGenerateResponse(
             subjective=data.get("subjective", ""),
             objective=data.get("objective", ""),
@@ -408,66 +348,35 @@ Provide structured JSON with:
         user_name: str = "Patient",
         user_role: str = "patient",
     ) -> Optional[str]:
-        """Generate conversational, speech-optimized voice response using Gemini."""
-        if not self.client:
-            return None
-        try:
-            from google.genai import types
+        """Generate conversational, speech-optimized voice response using Groq or local turn-taking."""
+        # 1. If external Groq is enabled and available:
+        if settings.AI_EXTERNAL_ENABLED and self.groq_adapter.is_available():
+            try:
+                lang_names = {
+                    "en": "English",
+                    "hi": "Hindi",
+                    "or": "Odia",
+                }
+                lang_label = lang_names.get(language, "English")
+                prompt = (
+                    f"User ({user_name}) said: \"{message}\"\n"
+                    f"Respond in {lang_label} concisely in 2-3 spoken sentences. "
+                    f"Do not give definitive diagnosis or prescriptions. Urge emergency care if severe symptoms."
+                )
+                output, _ = await self.groq_adapter.generate(prompt=prompt)
+                return output.strip().replace("*", "").replace("#", "")
+            except Exception as e:
+                logger.warning(f"Voice generation external call fallback: {e}")
 
-            lang_names = {
-                "en": "English",
-                "hi": "Hindi (हिन्दी)",
-                "or": "Odia (ଓଡ଼ିଆ)",
-                "bn": "Bengali (বাংলা)",
-                "ta": "Tamil (தமிழ்)",
-                "te": "Telugu (తెలుగు)",
-            }
-            lang_label = lang_names.get(language, "English")
-
-            persona_styles = {
-                "clara": "Warm, gentle, deeply empathetic clinical companion",
-                "marcus": "Steady, clear, direct, objective medical officer",
-                "maya": "Friendly, approachable, patient advocate with warm local cadence",
-                "aarav": "Crisp, concise, encouraging modern healthcare navigator",
-            }
-            persona_style = persona_styles.get(persona, persona_styles["clara"])
-
-            history_lines = []
-            if history:
-                for h in history[-6:]:
-                    role = "User" if h.get("role") == "user" else "Clinova"
-                    history_lines.append(f"{role}: {h.get('content', '')}")
-            history_text = "\n".join(history_lines) if history_lines else "None (first turn)"
-
-            system_instruction = (
-                f"You are Clinova Voice, an expert real-time voice health assistant ({persona_style}). "
-                f"You are speaking aloud directly to {user_name} ({user_role}). "
-                f"MANDATORY VOICE RULES:\n"
-                f"1. Spoken out loud: NEVER use bullet points, numbered lists, markdown, asterisks (*), or tables. Use natural human spoken sentences.\n"
-                f"2. Language: You MUST reply entirely in {lang_label}.\n"
-                f"3. Natural Turn-Taking: Acknowledge the user's specific statement, provide practical clinical guidance or empathy, and end with ONE short, natural follow-up question.\n"
-                f"4. Length: Keep it concise (2-4 spoken sentences), exactly like ChatGPT Advanced Voice Mode.\n"
-                f"5. Safety: Do not provide a definitive diagnosis or prescribe drugs. If red-flag symptoms are mentioned (e.g. chest pain, difficulty breathing, severe bleeding), immediately urge emergency care."
-            )
-
-            prompt = f"Conversation history:\n{history_text}\n\nCurrent user spoken statement: \"{message}\"\n\nSpoken response:"
-
-            response = await self.client.aio.models.generate_content(
-                model=settings.GEMINI_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.7,
-                    max_output_tokens=250,
-                ),
-            )
-            if response and response.text:
-                clean_text = response.text.strip().replace("*", "").replace("#", "")
-                return clean_text
-        except Exception as e:
-            logger.warning(f"Gemini voice chat call failed or unavailable: {e}")
-            return None
-        return None
+        # 2. Local deterministic conversational responses
+        msg_lower = message.lower()
+        if "chest pain" in msg_lower or "छाती में दर्द" in message or "ନିଶ୍ୱାସ" in message:
+            return "Please seek emergency medical attention immediately at the nearest hospital. I am flagging this as urgent."
+        if language in ("or", "odia"):
+            return "ନମସ୍କାର, ମୁଁ ଆପଣଙ୍କ ଲକ୍ଷଣ ବୁଝିପାରୁଛି। ଦୟାକରି କୁହନ୍ତୁ ଆପଣଙ୍କୁ ଆଉ କିଛି ଅସୁବିଧା ହେଉଛି କି?"
+        elif language in ("hi", "hindi"):
+            return "नमस्ते, मैंने आपकी बात समझ ली है। क्या आपको बुखार के साथ कोई और तकलीफ भी महसूस हो रही है?"
+        return "I have noted your reported symptoms. Are there any other sensations or discomforts you are experiencing?"
 
 
 ai_service = GeminiClinicalService()

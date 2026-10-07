@@ -254,7 +254,11 @@ export interface TriageCase {
   updated_at: string;
   waiting_minutes?: number;
   is_deleted?: boolean;
+  case_version?: number;
+  workflow_state?: string;
+  review_readiness_status?: string;
 }
+
 
 export interface ReferralNote {
   case_id: string;
@@ -391,3 +395,215 @@ export interface AssistantToolExecuteResponse {
   message: string;
   audit_logged: boolean;
 }
+
+// Phase 4 Clinical Verification Types
+export type FindingSeverity = "BLOCKING" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
+export type FindingType = "STRUCTURAL" | "COMPLETENESS" | "CONFLICT" | "TEMPORAL" | "PROVENANCE" | "UNCERTAINTY" | "EVIDENCE_QUALITY";
+export type FindingStatus = "UNRESOLVED" | "RESOLVED_BY_NEW_EVIDENCE" | "RESOLVED_BY_HUMAN_VERIFICATION" | "RESOLVED_BY_CORRECTION" | "DISMISSED_WITH_REASON";
+export type ReviewReadinessStatus = "not_ready" | "partially_ready" | "review_ready_with_flags" | "review_ready";
+
+export interface VerificationFinding {
+  id: string;
+  verification_run_id: string;
+  case_id: string;
+  case_version: number;
+  finding_type: FindingType;
+  category: string;
+  field_name?: string | null;
+  severity: FindingSeverity;
+  status: FindingStatus;
+  is_blocking: boolean;
+  title: string;
+  description: string;
+  explanation: string;
+  expected_information?: string | null;
+  observed_information?: string | null;
+  source_evidence_ids?: string[] | null;
+  fact_ids?: string[] | null;
+  timeline_event_ids?: string[] | null;
+  rule_id: string;
+  rule_version: string;
+  resolved_by_user_id?: string | null;
+  resolved_at?: string | null;
+  resolution_notes?: string | null;
+  created_at: string;
+}
+
+export interface VerificationConflict {
+  id: string;
+  verification_run_id: string;
+  case_id: string;
+  case_version: number;
+  conflict_type: string;
+  field_name: string;
+  severity: FindingSeverity;
+  source_a_evidence_id?: string | null;
+  source_a_type?: string | null;
+  source_a_modality?: string | null;
+  source_a_value: string;
+  source_a_timestamp?: string | null;
+  source_b_evidence_id?: string | null;
+  source_b_type?: string | null;
+  source_b_modality?: string | null;
+  source_b_value: string;
+  source_b_timestamp?: string | null;
+  resolution_state: string;
+  resolution_notes?: string | null;
+  resolved_by_user_id?: string | null;
+  resolved_at?: string | null;
+  rule_id: string;
+  created_at: string;
+}
+
+export interface VerificationRun {
+  id: string;
+  case_id: string;
+  patient_id?: string | null;
+  encounter_id?: string | null;
+  case_snapshot_id?: string | null;
+  case_version: number;
+  status: string;
+  engine_version: string;
+  ruleset_version: string;
+  review_readiness_status: ReviewReadinessStatus;
+  review_readiness_score: number;
+  review_readiness_reasons: string[];
+  findings_count: number;
+  blocking_findings_count: number;
+  high_findings_count: number;
+  medium_findings_count: number;
+  low_findings_count: number;
+  info_findings_count: number;
+  unresolved_findings_count: number;
+  resolved_findings_count: number;
+  structural_integrity_status: string;
+  completeness_status: string;
+  consistency_status: string;
+  temporal_status: string;
+  provenance_status: string;
+  uncertainty_status: string;
+  is_current: boolean;
+  is_stale?: boolean;
+  latency_ms: number;
+  failure_reason?: string | null;
+  summary?: Record<string, any> | null;
+  started_at: string;
+  completed_at?: string | null;
+  findings?: VerificationFinding[];
+  conflicts?: VerificationConflict[];
+}
+
+export interface ReviewReadinessSummary {
+  case_id: string;
+  case_version: number;
+  verified_case_version?: number | null;
+  review_readiness_status: ReviewReadinessStatus;
+  review_readiness_score: number;
+  review_readiness_reasons: string[];
+  is_stale: boolean;
+  blocking_count: number;
+  unresolved_count: number;
+  completeness_status: string;
+  consistency_status: string;
+  temporal_status: string;
+  provenance_status: string;
+  uncertainty_status: string;
+  last_verified_at?: string | null;
+}
+
+export interface CompletionQuestion {
+  id: string;
+  session_id: string;
+  case_id: string;
+  turn_number: number;
+  target_gap_id?: string | null;
+  target_gap_type: string;
+  target_field: string;
+  question_text: string;
+  question_type: 'text' | 'single_choice' | 'multi_choice' | 'numeric' | 'boolean' | 'date_time';
+  options?: Array<{ label: string; value: string; description?: string }> | null;
+  placeholder?: string | null;
+  priority_score: number;
+  clinical_rationale: string;
+  status: 'candidate' | 'selected' | 'presented' | 'answered' | 'skipped' | 'superseded' | 'cancelled';
+  is_safety_flag: boolean;
+  created_at: string;
+  presented_at?: string | null;
+  answered_at?: string | null;
+}
+
+export interface CompletionAnswer {
+  id: string;
+  question_id: string;
+  session_id: string;
+  case_id: string;
+  patient_id?: string | null;
+  raw_answer_text: string;
+  normalized_value?: string | null;
+  structured_payload?: Record<string, any> | null;
+  answer_modality: string;
+  is_skipped: boolean;
+  is_valid: boolean;
+  validation_notes?: string | null;
+  evidence_id?: string | null;
+  answered_at: string;
+}
+
+export interface CompletionSession {
+  id: string;
+  case_id: string;
+  patient_id?: string | null;
+  encounter_id?: string | null;
+  status: string;
+  case_version_started: number;
+  case_version_current: number;
+  current_turn: number;
+  max_turns: number;
+  questions_asked_count: number;
+  questions_answered_count: number;
+  questions_skipped_count: number;
+  initial_gap_count: number;
+  remaining_gap_count: number;
+  initial_readiness_score: number;
+  current_readiness_score: number;
+  stopping_reason?: string | null;
+  stopping_criterion?: string | null;
+  completion_summary?: Record<string, any> | null;
+  engine_version: string;
+  is_current: boolean;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+  current_question?: CompletionQuestion | null;
+  questions?: CompletionQuestion[];
+}
+
+export interface NextQuestionResponse {
+  session_id: string;
+  case_id: string;
+  turn_number: number;
+  max_turns: number;
+  is_complete: boolean;
+  stopping_reason?: string | null;
+  stopping_criterion?: string | null;
+  question?: CompletionQuestion | null;
+  remaining_gaps_count: number;
+  current_readiness_score: number;
+}
+
+export interface SubmitAnswerResponse {
+  session_id: string;
+  case_id: string;
+  answer: CompletionAnswer;
+  new_evidence_id?: string | null;
+  new_case_version: number;
+  rebuilt_snapshot_id?: string | null;
+  verification_run_id?: string | null;
+  new_readiness_score: number;
+  readiness_improved: boolean;
+  next_question?: CompletionQuestion | null;
+  is_session_complete: boolean;
+  stopping_reason?: string | null;
+  stopping_criterion?: string | null;
+}
+

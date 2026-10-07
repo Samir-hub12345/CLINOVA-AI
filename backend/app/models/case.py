@@ -1,8 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
-from sqlalchemy import String, Text, Boolean, Integer, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from typing import Optional, List
 from sqlalchemy import String, Text, Boolean, Integer, DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -36,6 +34,13 @@ class TriageCase(Base):
     )
     status: Mapped[str] = mapped_column(
         String(50), default="awaiting_review", nullable=False, index=True
+    )
+    case_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    workflow_state: Mapped[str] = mapped_column(
+        String(50), default="CREATED", nullable=False, index=True
+    )
+    review_readiness_status: Mapped[str] = mapped_column(
+        String(50), default="not_ready", nullable=False, index=True
     )
     queue_category: Mapped[str] = mapped_column(
         String(50), default="routine", nullable=False
@@ -113,6 +118,9 @@ class TriageCase(Base):
     facility = relationship("Facility")
     encounter = relationship("Encounter")
     patient = relationship("Patient")
+    evidence_items = relationship(
+        "CaseEvidence", back_populates="case", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         Index("ix_triage_cases_status_created", "status", "created_at"),

@@ -54,12 +54,28 @@ class Settings(BaseSettings):
     # AI Configuration & Prototype Settings
     DEMO_MODE: bool = True
     OFFLINE_DEMO: bool = False  # Enabled by the beginner local launch script.
+    AI_EXTERNAL_ENABLED: bool = False
+    REAL_PATIENT_DATA_EXTERNAL_ALLOWED: bool = False
+    
+    # Phase 2 Designated Providers
+    SARVAM_API_KEY: str = ""
+    SARVAM_STT_MODEL: str = "saaras:v4"
+    SARVAM_TRANSLATION_MODEL: str = "mayura:v1"
+    SARVAM_TTS_MODEL: str = "bulbul:v3"
+    
+    OCR_SPACE_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    
+    # Deprecated / Legacy Provider Flags (kept non-functional for compatibility)
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
-    LLM_PROVIDER: str = "mock"  # "mock", "gemini"
-    STT_PROVIDER: str = "local"  # "local", "faster-whisper", "mock"
-    OCR_PROVIDER: str = "local"  # "local", "paddleocr", "mock"
-    TRANSLATION_PROVIDER: str = "local"  # "local", "indictrans2", "mock"
+    
+    LLM_PROVIDER: str = "mock"  # "mock", "groq", "local"
+    STT_PROVIDER: str = "local"  # "local", "sarvam", "mock"
+    OCR_PROVIDER: str = "local"  # "local", "ocr_space", "mock"
+    TRANSLATION_PROVIDER: str = "local"  # "local", "sarvam", "mock"
+    TTS_PROVIDER: str = "local"  # "local", "sarvam", "mock"
     DEFAULT_FACILITY: str = "Government District Hospital"
     RETENTION_HOURS: int = 24
 

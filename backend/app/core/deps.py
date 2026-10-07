@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.security import ALGORITHM
 from app.db.session import get_db
 from app.models.user import User, UserRole
+from app.models.revoked_token import RevokedToken
 from app.schemas.user import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -23,10 +24,16 @@ async def get_current_user_optional(
     token: Optional[str] = Depends(oauth2_scheme_optional),
     db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
-    """Return authenticated User if valid Bearer token provided, else None."""
+    """Return authenticated User if valid Bearer token provided and not revoked, else None."""
     if not token:
         return None
     try:
+        # Check token revocation
+        token_hash = RevokedToken.hash_token(token)
+        rev_stmt = select(RevokedToken).where(RevokedToken.token_hash == token_hash)
+        if (await db.execute(rev_stmt)).scalar_one_or_none():
+            return None
+
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         user_id: Optional[str] = payload.get("sub")
         if not user_id:
@@ -45,12 +52,24 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Validate Bearer access token and return authenticated User record."""
+    """Validate Bearer access token, verify non-revocation, and return authenticated User record."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate authentication credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    revoked_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token has been revoked. Please log in again.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    # 1. Enforce token non-revocation check
+    token_hash = RevokedToken.hash_token(token)
+    rev_stmt = select(RevokedToken).where(RevokedToken.token_hash == token_hash)
+    if (await db.execute(rev_stmt)).scalar_one_or_none():
+        raise revoked_exception
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         user_id: Optional[str] = payload.get("sub")
@@ -87,12 +106,13 @@ def require_roles(allowed_roles: List[UserRole]):
 
 
 # Role-specific shortcut dependencies
-get_current_clinician = require_roles([UserRole.DOCTOR, UserRole.NURSE])
+get_current_clinician = require_roles([UserRole.DOCTOR, UserRole.NURSE, UserRole.STAFF])
+get_current_staff = require_roles([UserRole.STAFF, UserRole.NURSE])
 get_current_doctor = require_roles([UserRole.DOCTOR])
 get_current_admin = require_roles([UserRole.ADMIN])
 get_current_patient = require_roles([UserRole.PATIENT])
-get_current_staff_or_admin = require_roles([UserRole.DOCTOR, UserRole.NURSE, UserRole.ADMIN])
-get_intake_user = require_roles([UserRole.PATIENT, UserRole.DOCTOR, UserRole.NURSE])
+get_current_staff_or_admin = require_roles([UserRole.DOCTOR, UserRole.NURSE, UserRole.STAFF, UserRole.ADMIN])
+get_intake_user = require_roles([UserRole.PATIENT, UserRole.DOCTOR, UserRole.NURSE, UserRole.STAFF])
 
 
 def get_client_ip(request: Request) -> Optional[str]:

@@ -8,7 +8,10 @@ import { Footer } from "@/components/common/footer";
 import { ClinicalDisclaimer } from "@/components/clinical/disclaimer";
 import { TimelineView } from "@/components/clinical/timeline-view";
 import { ProvenanceBadge } from "@/components/clinical/provenance-badge";
+import { VerificationPanel } from "@/components/clinical/verification-panel";
+import { CompletionPanel } from "@/components/clinical/completion-panel";
 import { api } from "@/lib/api";
+
 import { useAuth } from "@/lib/auth";
 import { TriageCase, OCRField } from "@/types";
 import {
@@ -255,7 +258,21 @@ export default function CaseReviewDetailPage() {
           </div>
         )}
 
+        {/* Section B_VERIFY: Phase 4 Verification & Review Readiness */}
+        <VerificationPanel
+          caseId={caseData.id}
+          currentCaseVersion={caseData.case_version}
+          onRefreshCase={loadCase}
+        />
+
+        {/* Section B_COMPLETE: Phase 5 Intelligent Completion & Adaptive Interview */}
+        <CompletionPanel
+          caseId={caseData.id}
+          onCaseUpdated={loadCase}
+        />
+
         {/* Section B: Patient Provided Information */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
             <div className="flex items-center justify-between">

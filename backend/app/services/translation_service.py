@@ -1,35 +1,23 @@
-import logging
-from app.schemas.case import TranslationResponse
+"""Multilingual translation and clinical normalization service for Clinova AI."""
 
-logger = logging.getLogger("clinova")
+import logging
+from app.core.config import settings
+from app.schemas.case import TranslationResponse
+from app.services.providers.sarvam_translation import SarvamTranslationAdapter
+from app.services.providers.local_fallback import LocalTranslationProvider
+
+logger = logging.getLogger("clinova.translation")
 
 
 class TranslationService:
     """Multilingual translation and normalization service preserving original inputs."""
 
-    # High-quality dictionary / synthetic normalization mapping
-    DEMO_TRANSLATIONS = {
-        "or": {
-            "keywords": ["ଜ୍ୱର", "ମୁଣ୍ଡ ବିନ୍ଧା", "ନିଶ୍ୱାସ", "କଷ୍ଟ", "ବାନ୍ତି", "ଦୁର୍ବଳତା"],
-            "fallback_normalized": (
-                "Patient reports high fever for 3 days, severe headache, generalized body weakness, "
-                "and progressive shortness of breath upon minimal exertion."
-            ),
-            "summary": "Normalized from Odia regional dialect to clinical English representation.",
-        },
-        "hi": {
-            "keywords": ["बुखार", "बदन दर्द", "सांस", "तकलीफ", "खांसी", "उल्टी"],
-            "fallback_normalized": (
-                "Patient reports sustained high-grade fever for three days, myalgia (body aches), "
-                "cough, and subjective difficulty breathing."
-            ),
-            "summary": "Normalized from Hindi colloquial speech to clinical English representation.",
-        },
-    }
+    def __init__(self):
+        self.local_provider = LocalTranslationProvider()
+        self.adapter = SarvamTranslationAdapter(fallback_provider=self.local_provider)
 
-    @classmethod
     async def translate_and_normalize(
-        cls, text: str, source_language: str = "en"
+        self, text: str, source_language: str = "en"
     ) -> TranslationResponse:
         """Translates regional input (Hindi/Odia) to English while preserving original text."""
         lang_code = source_language.lower()
@@ -44,52 +32,33 @@ class TranslationService:
                 is_demo_fallback=False,
             )
 
-        if lang_code in ("or", "odia"):
-            demo = cls.DEMO_TRANSLATIONS["or"]
-            # If the user typed something custom, we still normalize it cleanly
-            translated = (
-                f"Patient reports: '{text}'. "
-                f"Clinical normalization: High fever for multiple days with associated breathing difficulty and systemic weakness."
-            )
-            if "ଜ୍ୱର" in text or "ନିଶ୍ୱାସ" in text:
-                translated = demo["fallback_normalized"]
+        lang_name = "Odia" if lang_code in ("or", "odia") else "Hindi" if lang_code in ("hi", "hindi") else source_language
 
+        try:
+            translated_text, metadata = await self.adapter.translate(
+                text=text,
+                source_lang=source_language,
+                target_lang="en",
+            )
             return TranslationResponse(
                 original_text=text,
-                original_language="Odia",
-                translated_text=translated,
+                original_language=lang_name,
+                translated_text=translated_text,
                 target_language="en",
-                normalization_summary=demo["summary"],
-                is_demo_fallback=True,
+                normalization_summary=f"Normalized from {lang_name} regional dialect to clinical English representation.",
+                is_demo_fallback=metadata.fallback_used,
             )
-
-        if lang_code in ("hi", "hindi"):
-            demo = cls.DEMO_TRANSLATIONS["hi"]
-            translated = (
-                f"Patient reports: '{text}'. "
-                f"Clinical normalization: High fever with persistent cough and breathing discomfort."
-            )
-            if "बुखार" in text or "सांस" in text:
-                translated = demo["fallback_normalized"]
-
+        except Exception as e:
+            logger.error("Translation error: %s. Using local fallback.", e)
+            translated_text, meta = await self.local_provider.translate(text, source_language, "en")
             return TranslationResponse(
                 original_text=text,
-                original_language="Hindi",
-                translated_text=translated,
+                original_language=lang_name,
+                translated_text=translated_text,
                 target_language="en",
-                normalization_summary=demo["summary"],
+                normalization_summary=f"Processed in regional language ({lang_name}).",
                 is_demo_fallback=True,
             )
-
-        # Generic fallback
-        return TranslationResponse(
-            original_text=text,
-            original_language=source_language,
-            translated_text=text,
-            target_language="en",
-            normalization_summary=f"Input processed in language: {source_language}.",
-            is_demo_fallback=True,
-        )
 
 
 translation_service = TranslationService()

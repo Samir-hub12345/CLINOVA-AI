@@ -37,9 +37,13 @@ class AuditService:
                 user_agent=user_agent,
                 details=details,
             )
-            async with async_session_factory() as session:
-                session.add(audit_entry)
-                await session.commit()
+            if db is not None:
+                db.add(audit_entry)
+                await db.commit()
+            else:
+                async with async_session_factory() as session:
+                    session.add(audit_entry)
+                    await session.commit()
             return audit_entry
         except Exception as e:
             logger.error(f"Failed to record audit log: {e}", exc_info=True)

@@ -1,79 +1,92 @@
+"""Medical Report OCR and document extraction service for Clinova AI."""
+
 import logging
 from typing import List, Optional
 from app.schemas.case import OCRFieldSchema, ReportOCRResponse
+from app.services.providers.ocr_space import OCRSpaceAdapter
+from app.services.providers.local_fallback import LocalOCRProvider
+from app.services.pdf_extractor import pdf_extractor
 
-logger = logging.getLogger("clinova")
+logger = logging.getLogger("clinova.ocr")
 
 
 class OCRService:
-    """Medical Report OCR extraction service with synthetic sample fallback."""
+    """Medical Report OCR extraction service with OCR.Space and local PDF parser."""
 
-    SYNTHETIC_CBC_FIELDS = [
-        OCRFieldSchema(
-            field_name="Hemoglobin (Hb)",
-            value="12.4",
-            unit="g/dL",
-            confidence=0.94,
-            bounding_box=[140, 210, 360, 245],
-            verification_status="pending",
-            source_reference="Complete Blood Count (CBC) Panel",
-        ),
-        OCRFieldSchema(
-            field_name="Total Leukocyte Count (WBC)",
-            value="7.2",
-            unit="x10^3/uL",
-            confidence=0.91,
-            bounding_box=[140, 255, 360, 290],
-            verification_status="pending",
-            source_reference="Complete Blood Count (CBC) Panel",
-        ),
-        OCRFieldSchema(
-            field_name="Platelet Count",
-            value="220",
-            unit="x10^3/uL",
-            confidence=0.95,
-            bounding_box=[140, 300, 360, 335],
-            verification_status="pending",
-            source_reference="Complete Blood Count (CBC) Panel",
-        ),
-        OCRFieldSchema(
-            field_name="Red Blood Cell Count (RBC)",
-            value="4.5",
-            unit="x10^6/uL",
-            confidence=0.93,
-            bounding_box=[140, 345, 360, 380],
-            verification_status="pending",
-            source_reference="Complete Blood Count (CBC) Panel",
-        ),
-    ]
+    def __init__(self):
+        self.local_provider = LocalOCRProvider()
+        self.adapter = OCRSpaceAdapter(fallback_provider=self.local_provider)
 
-    @classmethod
     async def process_report(
-        cls, file_bytes: bytes, filename: str = "report.png"
+        self, file_bytes: bytes, filename: str = "report.png"
     ) -> ReportOCRResponse:
         """Process an uploaded medical lab report and extract key clinical fields."""
-        # High fidelity synthetic extraction for demonstration
-        fields = cls.SYNTHETIC_CBC_FIELDS.copy()
-        raw_text = (
-            "CENTRAL PATHOLOGY LABORATORY - PUBLIC HEALTH FACILITY\n"
-            "PATIENT MRN: CLV-DEMO-SAMPLE | TEST: COMPLETE BLOOD COUNT (CBC)\n"
-            "Hemoglobin: 12.4 g/dL (Ref: 12.0 - 16.0)\n"
-            "Total WBC: 7.2 x10^3/uL (Ref: 4.0 - 11.0)\n"
-            "Platelet Count: 220 x10^3/uL (Ref: 150 - 450)\n"
-            "RBC Count: 4.5 x10^6/uL (Ref: 4.0 - 5.5)\n"
-            "STATUS: COMPLETED | OCR CONFIDENCE: HIGH (AVERAGE 93.2%)\n"
-            "NOTICE: SYNTHETIC DATA SAMPLE FOR TRIAGE SUPPORT PROTOTYPE ONLY"
-        )
+        if not file_bytes or len(file_bytes) == 0:
+            return ReportOCRResponse(
+                report_filename=filename,
+                fields=[],
+                raw_extracted_text="",
+                confidence_average=0.0,
+                is_synthetic_sample=False,
+                status="failed",
+                disclaimer="Empty file payload provided.",
+            )
 
-        return ReportOCRResponse(
-            report_filename=filename,
-            fields=fields,
-            raw_extracted_text=raw_text,
-            confidence_average=0.932,
-            is_synthetic_sample=True,
-            status="success",
-            disclaimer="Synthetic sample — not a real medical record. Requires qualified reviewer verification.",
-        )
+        mime_type = "application/pdf" if filename.lower().endswith(".pdf") else "image/png"
+
+        # Check if text PDF first
+        if filename.lower().endswith(".pdf"):
+            extracted_text, is_scanned, page_count = pdf_extractor.extract_text_from_bytes(file_bytes)
+            if not is_scanned and len(extracted_text) >= 40:
+                logger.info("PDF contains native digital text stream. Using direct extraction without OCR.")
+                return ReportOCRResponse(
+                    report_filename=filename,
+                    fields=[],
+                    raw_extracted_text=extracted_text,
+                    confidence_average=1.0,
+                    is_synthetic_sample=False,
+                    status="success",
+                    disclaimer="Extracted from digital text PDF stream. Requires reviewer verification.",
+                )
+
+        # Scanned PDF or Image: Route to OCR adapter
+        try:
+            data, metadata = await self.adapter.extract_text_and_tables(file_bytes, mime_type)
+            raw_text = data.get("raw_text", "")
+            raw_fields = data.get("fields", [])
+            fields = []
+            for f in raw_fields:
+                fields.append(
+                    OCRFieldSchema(
+                        field_name=f.get("field_name", "Parameter"),
+                        value=str(f.get("value", "")),
+                        unit=f.get("unit", ""),
+                        confidence=float(f.get("confidence", 0.9)),
+                        verification_status="pending",
+                        source_reference=filename,
+                    )
+                )
+
+            return ReportOCRResponse(
+                report_filename=filename,
+                fields=fields,
+                raw_extracted_text=raw_text,
+                confidence_average=data.get("confidence_average", 0.9),
+                is_synthetic_sample=metadata.fallback_used,
+                status="success",
+                disclaimer="Extracted via OCR — not a clinically confirmed diagnosis. Requires reviewer verification.",
+            )
+        except Exception as e:
+            logger.error("OCR extraction failure: %s", e)
+            return ReportOCRResponse(
+                report_filename=filename,
+                fields=[],
+                raw_extracted_text="",
+                confidence_average=0.0,
+                is_synthetic_sample=False,
+                status="failed",
+                disclaimer=f"OCR processing failed: {str(e)}",
+            )
 
 
 ocr_service = OCRService()

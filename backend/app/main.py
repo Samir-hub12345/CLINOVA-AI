@@ -414,6 +414,19 @@ if settings.CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+# Register Standardized Error Envelopes
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
+from app.core.errors import (
+    http_exception_handler,
+    validation_exception_handler,
+    unhandled_exception_handler,
+)
+
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
+
 # Mount API routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

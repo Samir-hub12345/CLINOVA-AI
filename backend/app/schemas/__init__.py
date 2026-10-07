@@ -40,6 +40,29 @@ from app.schemas.audit import (
     AuditLogListResponse,
 )
 
+from app.schemas.verification import (
+    VerificationFindingResponse,
+    VerificationConflictResponse,
+    VerificationRunResponse,
+    VerifyCaseRequest,
+    ResolveFindingRequest,
+    ReviewReadinessSummaryResponse,
+)
+
+from app.schemas.completion import (
+    StartCompletionSessionRequest,
+    SubmitAnswerRequest,
+    SkipQuestionRequest,
+    CompleteSessionRequest,
+    CompletionOption,
+    CompletionQuestionResponse,
+    CompletionAnswerResponse,
+    InformationGapResponse,
+    CompletionSessionResponse,
+    NextQuestionResponse,
+    SubmitAnswerResponse,
+)
+
 __all__ = [
     "HealthCheckResponse",
     "UserBase",
@@ -70,4 +93,22 @@ __all__ = [
     "AuditLogCreate",
     "AuditLogResponse",
     "AuditLogListResponse",
+    "VerificationFindingResponse",
+    "VerificationConflictResponse",
+    "VerificationRunResponse",
+    "VerifyCaseRequest",
+    "ResolveFindingRequest",
+    "ReviewReadinessSummaryResponse",
+    "StartCompletionSessionRequest",
+    "SubmitAnswerRequest",
+    "SkipQuestionRequest",
+    "CompleteSessionRequest",
+    "CompletionOption",
+    "CompletionQuestionResponse",
+    "CompletionAnswerResponse",
+    "InformationGapResponse",
+    "CompletionSessionResponse",
+    "NextQuestionResponse",
+    "SubmitAnswerResponse",
 ]
+

@@ -10,6 +10,7 @@ from app.db.base import Base
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     DOCTOR = "doctor"
+    STAFF = "staff"
     NURSE = "nurse"
     PATIENT = "patient"
 
