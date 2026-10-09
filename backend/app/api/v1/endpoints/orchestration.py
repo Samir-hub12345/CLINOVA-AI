@@ -18,6 +18,17 @@ from app.db.models import Case, Facility, ClinicianDecision, AuditLog, VitalRead
 from app.domain.caregraph.engine import evaluate_uncertainty_and_gaps, calculate_trajectory_slope
 from app.domain.facilitygraph.engine import evaluate_feasibility
 from app.domain.orchestration.engine import OrchestrationEngine
+from app.core.auth import get_current_actor, ActorContext
+from app.core.rbac import (
+    Permission,
+    check_role_permission,
+    ROLE_CLINICIAN,
+    ROLE_DOCTOR,
+    ROLE_SYSTEM_ADMIN,
+    PROHIBITED_CLINICAL_ACTIONS,
+)
+from app.core.policy import authorize_case_access, validate_review_action_safety
+from app.core.errors import ClinovaAPIError
 
 router = APIRouter()
 
@@ -37,14 +48,19 @@ class ClinicianDecisionRequest(BaseModel):
 
 
 @router.post("/evaluate", tags=["Orchestration Engine"])
-async def evaluate_safest_action(req: EvaluateOrchestrationRequest, db: AsyncSession = Depends(get_db)):
+async def evaluate_safest_action(
+    req: EvaluateOrchestrationRequest,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
     """
     Evaluates multi-dimensional inputs to derive the safest achievable advisory care action.
     Advisory and non-diagnostic; requires clinician sign-off.
     """
     case = await db.get(Case, req.case_id)
     if not case:
-        raise HTTPException(status_code=404, detail="Case not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message="Case not found.", status_code=404)
+    await authorize_case_access(case, actor, required_permission=Permission.CASE_READ, db=db)
 
     fac_id = req.facility_id or case.facility_id
     stmt = select(Facility).where(Facility.id == fac_id).options(selectinload(Facility.capabilities))
@@ -117,26 +133,34 @@ async def evaluate_safest_action(req: EvaluateOrchestrationRequest, db: AsyncSes
 
 
 @router.post("/decision", tags=["Orchestration Engine"])
-async def authorize_clinician_decision(req: ClinicianDecisionRequest, db: AsyncSession = Depends(get_db)):
+async def authorize_clinician_decision(
+    req: ClinicianDecisionRequest,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
     """
     Submits qualified clinician authorization or structured override.
     Drives the encounter finite state machine (DOC-07).
     """
+    check_role_permission(actor.role, Permission.CLINICAL_DECISION_RECORD)
     case = await db.get(Case, req.case_id)
     if not case:
-        raise HTTPException(status_code=404, detail="Case not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message="Case not found.", status_code=404)
+
+    await authorize_case_access(case, actor, required_permission=Permission.CLINICAL_DECISION_RECORD, db=db)
+    await validate_review_action_safety(req.action, actor, case_id=case.id, db=db)
 
     # Validate override justification if overridden
-    if req.decision_type == "OVERRIDE" and (not req.override_reason or not req.override_reason.strip()):
+    if req.decision_type.upper() == "OVERRIDE" and (not req.override_reason or not req.override_reason.strip()):
         raise HTTPException(
             status_code=422,
             detail="Mandatory clinician override justification is required when departing from advisory guidance.",
         )
 
-    # Record Decision
+    # Record Decision authoritatively using actor.actor_id
     decision = ClinicianDecision(
         case_id=case.id,
-        clinician_id=req.clinician_id,
+        clinician_id=actor.actor_id,
         action_type=req.action.upper(),
         decision_type=req.decision_type.upper(),
         override_reason=req.override_reason,
@@ -159,7 +183,7 @@ async def authorize_clinician_decision(req: ClinicianDecisionRequest, db: AsyncS
 
     # Audit Trail
     audit = AuditLog(
-        actor_id=req.clinician_id,
+        actor_id=actor.actor_id,
         action="CLINICIAN_DECISION_RECORDED",
         entity_type="CASE",
         entity_id=case.id,
@@ -168,6 +192,7 @@ async def authorize_clinician_decision(req: ClinicianDecisionRequest, db: AsyncS
             "decision_type": req.decision_type,
             "override_reason": req.override_reason,
             "new_case_status": case.status,
+            "actor_role": actor.role,
         },
     )
     db.add(audit)

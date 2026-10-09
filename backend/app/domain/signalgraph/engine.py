@@ -37,13 +37,40 @@ class SignalGraphEngine:
                 "recorded_at": now - timedelta(hours=idx * 6),
             })
 
-    def record_event(self, facility_id: str, syndrome_tag: str, acuity_tier: str) -> Dict[str, Any]:
-        """Ingests a real de-identified event from the clinical workflow."""
+    def record_event(
+        self,
+        facility_id: str,
+        syndrome_tag: str,
+        acuity_tier: str,
+        source_event_id: Optional[str] = None,
+        disposition: Optional[str] = None,
+        actual_action: Optional[str] = None,
+        outcome_status: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Ingests a real de-identified event from the clinical workflow with deduplication."""
+        if source_event_id:
+            for existing in self.events:
+                if existing.get("source_event_id") == source_event_id:
+                    # Update fields if corrected/re-sent without duplicating event count
+                    if disposition:
+                        existing["disposition"] = disposition
+                    if actual_action:
+                        existing["actual_action"] = actual_action
+                    if outcome_status:
+                        existing["outcome_status"] = outcome_status
+                    if syndrome_tag:
+                        existing["syndrome_tag"] = syndrome_tag
+                    return existing
+
         event = {
             "id": f"sig-ev-{len(self.events) + 1}",
             "facility_id": facility_id,
             "syndrome_tag": syndrome_tag,
             "acuity_tier": acuity_tier,
+            "source_event_id": source_event_id,
+            "disposition": disposition,
+            "actual_action": actual_action,
+            "outcome_status": outcome_status,
             "recorded_at": datetime.now(timezone.utc),
         }
         self.events.append(event)
@@ -170,6 +197,67 @@ class SignalGraphEngine:
             "network_icu_occupancy_pct": load["network_icu_occupancy_pct"],
             "total_ed_waiting": load["total_ed_waiting_cases"],
             "active_clusters": [c for c in surges["clusters"] if c["alert_class"] != "NORMAL"],
+        }
+
+    def get_outcome_metrics(
+        self,
+        facility_id: Optional[str] = None,
+        window_hours: int = 48,
+    ) -> Dict[str, Any]:
+        """
+        Aggregates de-identified macro outcome telemetry across facilities.
+        Strictly zero PHI. Preserves unknown status without false optimism.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+        filtered = []
+        for e in self.events:
+            rec_at = e.get("recorded_at")
+            if rec_at:
+                if isinstance(rec_at, str):
+                    rec_at = datetime.fromisoformat(rec_at.replace("Z", "+00:00"))
+                if rec_at.tzinfo is None:
+                    rec_at = rec_at.replace(tzinfo=timezone.utc)
+                if rec_at < cutoff:
+                    continue
+
+            # Only consider events with outcome metadata
+            if not (e.get("outcome_status") or e.get("actual_action") or (e.get("syndrome_tag") and e["syndrome_tag"].startswith("OUTCOME_"))):
+                continue
+
+            if facility_id and e.get("facility_id") != facility_id:
+                continue
+
+            filtered.append(e)
+
+        outcome_status_counts: Dict[str, int] = {}
+        actual_action_counts: Dict[str, int] = {}
+        disposition_counts: Dict[str, int] = {}
+        unknown_outcomes = 0
+
+        for ev in filtered:
+            status = ev.get("outcome_status") or "UNKNOWN"
+            outcome_status_counts[status] = outcome_status_counts.get(status, 0) + 1
+            if status == "UNKNOWN":
+                unknown_outcomes += 1
+
+            act = ev.get("actual_action") or "UNKNOWN"
+            actual_action_counts[act] = actual_action_counts.get(act, 0) + 1
+
+            disp = ev.get("disposition") or (
+                ev.get("syndrome_tag", "").replace("OUTCOME_", "") if ev.get("syndrome_tag", "").startswith("OUTCOME_") else "UNKNOWN"
+            )
+            disposition_counts[disp] = disposition_counts.get(disp, 0) + 1
+
+        return {
+            "mode": "SYNTHETIC_TELEMETRY_MODE",
+            "disclaimer": "De-identified aggregated outcome telemetry. Zero real-world PHI.",
+            "window_hours": window_hours,
+            "facility_id_filter": facility_id,
+            "total_outcomes_recorded": len(filtered),
+            "outcome_status_distribution": outcome_status_counts,
+            "actual_action_distribution": actual_action_counts,
+            "disposition_distribution": disposition_counts,
+            "unknown_outcomes_count": unknown_outcomes,
         }
 
 

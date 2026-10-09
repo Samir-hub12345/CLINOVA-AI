@@ -33,6 +33,10 @@ from app.domain.caregraph.engine import (
     VerificationStatus,
 )
 from app.domain.signalgraph.engine import signal_engine
+from app.core.auth import get_current_actor, ActorContext
+from app.core.rbac import Permission, check_role_permission
+from app.core.policy import authorize_case_access
+from app.core.errors import ClinovaAPIError
 
 router = APIRouter()
 
@@ -56,7 +60,11 @@ class VerifyEvidenceRequest(BaseModel):
 
 
 @router.get("/{case_id}", tags=["CareGraph"])
-async def get_case_caregraph(case_id: str, db: AsyncSession = Depends(get_db)):
+async def get_case_caregraph(
+    case_id: str,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
     """Returns the full dynamic CareGraph topology, trajectory, and uncertainty for a case."""
     stmt = (
         select(Case)
@@ -67,12 +75,14 @@ async def get_case_caregraph(case_id: str, db: AsyncSession = Depends(get_db)):
             selectinload(Case.vitals),
             selectinload(Case.evidence_records),
             selectinload(Case.decisions),
+            selectinload(Case.outcome),
         )
     )
     res = await db.execute(stmt)
     case = res.scalars().first()
     if not case:
-        raise HTTPException(status_code=404, detail=f"Case {case_id} not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message=f"Case {case_id} not found.", status_code=404)
+    await authorize_case_access(case, actor, required_permission=Permission.CASE_READ, db=db)
 
     vitals_history = [
         {
@@ -142,7 +152,31 @@ async def get_case_caregraph(case_id: str, db: AsyncSession = Depends(get_db)):
         "required_bundle": case.required_bundle,
     }
 
-    graph_view = build_caregraph_view(case_data_dict, vitals_history, ev_records, decisions_list)
+    outcome_dict = None
+    if case.outcome:
+        outcome_dict = {
+            "id": case.outcome.id,
+            "disposition": case.outcome.disposition,
+            "final_condition": case.outcome.final_condition,
+            "actual_action": case.outcome.actual_action,
+            "recommendation": case.outcome.recommendation,
+            "professional_decision": case.outcome.professional_decision,
+            "outcome_status": case.outcome.outcome_status,
+            "recorded_by": case.outcome.recorded_by,
+            "actor_role": case.outcome.actor_role,
+            "is_corrected": case.outcome.is_corrected,
+            "version": case.outcome.version,
+            "notes": case.outcome.notes,
+            "recorded_at": case.outcome.recorded_at.isoformat() if case.outcome.recorded_at else None,
+        }
+
+    graph_view = build_caregraph_view(
+        case_data_dict,
+        vitals_history,
+        ev_records,
+        decisions_list,
+        outcome_data=outcome_dict,
+    )
 
     return {
         "case": case_data_dict,
@@ -155,6 +189,7 @@ async def get_case_caregraph(case_id: str, db: AsyncSession = Depends(get_db)):
         "graph": graph_view,
         "evidence_records": ev_records,
         "vitals_history": vitals_history,
+        "outcome": outcome_dict,
     }
 
 
@@ -163,6 +198,7 @@ async def append_vital_reading(
     case_id: str,
     req: VitalSignRequest,
     db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
 ):
     """
     Appends serial vital signs.
@@ -170,7 +206,8 @@ async def append_vital_reading(
     """
     case = await db.get(Case, case_id)
     if not case:
-        raise HTTPException(status_code=404, detail=f"Case {case_id} not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message=f"Case {case_id} not found.", status_code=404)
+    await authorize_case_access(case, actor, required_permission=Permission.VITALS_RECORD, db=db)
 
     new_vital = VitalReading(
         case_id=case.id,
@@ -216,7 +253,7 @@ async def append_vital_reading(
 
     # Log Audit
     audit = AuditLog(
-        actor_id="CLINICIAN_WORKSTATION",
+        actor_id=actor.actor_id,
         action="VITALS_APPENDED",
         entity_type="CASE",
         entity_id=case.id,
@@ -242,11 +279,16 @@ async def append_vital_reading(
 
 
 @router.get("/{case_id}/missing", tags=["CareGraph"])
-async def get_missing_protocol_parameters(case_id: str, db: AsyncSession = Depends(get_db)):
+async def get_missing_protocol_parameters(
+    case_id: str,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
     """Returns missing parameters and diagnostic uncertainty score."""
     case = await db.get(Case, case_id)
     if not case:
-        raise HTTPException(status_code=404, detail="Case not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message="Case not found.", status_code=404)
+    await authorize_case_access(case, actor, required_permission=Permission.CASE_READ, db=db)
 
     vitals_q = await db.execute(
         select(VitalReading).where(VitalReading.case_id == case_id).order_by(VitalReading.recorded_at.desc())
@@ -277,9 +319,13 @@ async def get_missing_protocol_parameters(case_id: str, db: AsyncSession = Depen
 
 
 @router.post("/{case_id}/questions", tags=["CareGraph"])
-async def generate_targeted_questions(case_id: str, db: AsyncSession = Depends(get_db)):
+async def generate_targeted_questions(
+    case_id: str,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
     """Generates targeted follow-up questions to resolve diagnostic gaps."""
-    missing_data = await get_missing_protocol_parameters(case_id, db)
+    missing_data = await get_missing_protocol_parameters(case_id, db, actor)
     return {"follow_up_questions": missing_data["follow_up_questions"]}
 
 
@@ -288,20 +334,31 @@ async def verify_evidence_node(
     case_id: str,
     req: VerifyEvidenceRequest,
     db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
 ):
     """
     Promotes an evidence node to Clinician-Verified status.
     Decreases diagnostic uncertainty U_t by improving V_clinician ratio.
     """
+    case = await db.get(Case, case_id)
+    if not case:
+        raise ClinovaAPIError(category="NOT_FOUND", message="Case not found.", status_code=404)
+    await authorize_case_access(case, actor, required_permission=Permission.REVIEW_ACTION_EXECUTE, db=db)
+    if not actor.is_clinician():
+        raise ClinovaAPIError(
+            category="AUTHORIZATION_ERROR",
+            message="Evidence verification requires a licensed clinician.",
+            status_code=403,
+        )
+
     ev = await db.get(EvidenceRecord, req.evidence_id)
     if not ev or ev.case_id != case_id:
-        raise HTTPException(status_code=404, detail="Evidence record not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message="Evidence record not found.", status_code=404)
 
     ev.verification_status = req.verification_status
-    ev.verified_by = req.clinician_id
+    ev.verified_by = actor.actor_id
 
     # Recalculate uncertainty and update Case model
-    case = await db.get(Case, case_id)
     ev_q = await db.execute(select(EvidenceRecord).where(EvidenceRecord.case_id == case_id))
     all_ev = ev_q.scalars().all()
 
@@ -335,7 +392,7 @@ async def verify_evidence_node(
 
     # Audit
     audit = AuditLog(
-        actor_id=req.clinician_id,
+        actor_id=actor.actor_id,
         action="EVIDENCE_VERIFIED",
         entity_type="EVIDENCE_RECORD",
         entity_id=ev.id,

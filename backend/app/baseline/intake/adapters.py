@@ -70,8 +70,8 @@ def scrub_pii(raw_text: str, reported_name: Optional[str] = None, reported_age: 
     if reported_name:
         scrubbed = re.sub(re.escape(reported_name), "[REDACTED_NAME]", scrubbed, flags=re.IGNORECASE)
 
-    # Generate synthetic ID
-    short_hash = uuid.uuid4().hex[:4].upper()
+    # Generate synthetic ID (8 hex chars = 4+ billion space to avoid collision)
+    short_hash = uuid.uuid4().hex[:8].upper()
     synthetic_id = f"SYN-PT-{short_hash}"
 
     # Generalize age into 10-year bracket

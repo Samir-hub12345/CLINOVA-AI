@@ -57,6 +57,8 @@ docker-compose.override.yml
 .pytest_cache/
 *.tsbuildinfo
 storage_data/
+storage/
+backend/storage/
 scratch/
 backups/
 .clinova/

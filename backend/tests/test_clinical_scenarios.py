@@ -29,6 +29,9 @@ from app.db.init_db import init_db
 @pytest.fixture(autouse=True)
 async def setup_database():
     """Initializes and seeds database before running scenario tests."""
+    from app.core.config import settings
+    settings.ALLOW_LEGACY_ACTOR_HEADERS = True
+    settings.ALLOW_LEGACY_ANONYMOUS_FALLBACK = True
     await init_db()
 
 
@@ -514,10 +517,13 @@ async def test_scen_16_facility_demand_increase():
     """SCEN-16: Facility Demand Increase -> ICU saturation flips feasibility to DEGRADED."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_headers = {"X-Actor-Id": "usr-admin-03", "X-Facility-Id": "FAC-DH-04"}
+
         # Set District Hospital ICU available beds to 0
         cap_res = await client.post(
             "/api/v1/facilities/FAC-DH-04/update-capacity",
             json={"icu_beds_available": 0},
+            headers=admin_headers,
         )
         assert cap_res.status_code == 200
 
@@ -535,6 +541,7 @@ async def test_scen_16_facility_demand_increase():
         await client.post(
             "/api/v1/facilities/FAC-DH-04/update-capacity",
             json={"icu_beds_available": 2},
+            headers=admin_headers,
         )
 
 

@@ -36,8 +36,8 @@ def upgrade() -> None:
             identifier_value VARCHAR(128) NOT NULL,
             issuing_system VARCHAR(100),
             is_primary BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT uq_patient_identifier UNIQUE (patient_id, identifier_type, identifier_value)
         )
     """)
@@ -55,10 +55,10 @@ def upgrade() -> None:
             status VARCHAR(50) NOT NULL DEFAULT 'in_progress',
             reason_for_visit VARCHAR(500),
             clinical_summary TEXT,
-            start_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            start_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
             end_time TIMESTAMP WITH TIME ZONE,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     exec_sql("CREATE INDEX IF NOT EXISTS ix_encounters_patient_id ON encounters(patient_id)")
@@ -80,14 +80,14 @@ def upgrade() -> None:
             reference_range_low DOUBLE PRECISION,
             reference_range_high DOUBLE PRECISION,
             interpretation VARCHAR(50),
-            observed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            observed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
             recorded_by VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
             source VARCHAR(50) NOT NULL DEFAULT 'human_entered',
             verification_status VARCHAR(50) NOT NULL DEFAULT 'unverified',
             verified_by VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
             verified_at TIMESTAMP WITH TIME ZONE,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     exec_sql("CREATE INDEX IF NOT EXISTS ix_obs_patient_id ON clinical_observations(patient_id)")
@@ -108,8 +108,8 @@ def upgrade() -> None:
             notes TEXT,
             recorded_by VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
             verification_status VARCHAR(50) NOT NULL DEFAULT 'confirmed',
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     exec_sql("CREATE INDEX IF NOT EXISTS ix_allergies_patient_id ON allergies(patient_id)")
@@ -133,8 +133,8 @@ def upgrade() -> None:
             end_date TIMESTAMP WITH TIME ZONE,
             instructions TEXT,
             prescribed_by VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     exec_sql("CREATE INDEX IF NOT EXISTS ix_medications_patient_id ON medications(patient_id)")
@@ -155,8 +155,8 @@ def upgrade() -> None:
             resolution_date VARCHAR(50),
             notes TEXT,
             recorded_by VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     exec_sql("CREATE INDEX IF NOT EXISTS ix_medical_conditions_patient_id ON medical_conditions(patient_id)")
@@ -180,8 +180,8 @@ def upgrade() -> None:
             verified_at TIMESTAMP WITH TIME ZONE,
             diagnosed_by VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
             notes TEXT,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     exec_sql("CREATE INDEX IF NOT EXISTS ix_diagnoses_patient_id ON diagnoses(patient_id)")
@@ -206,8 +206,8 @@ def upgrade() -> None:
             amendment_reason TEXT,
             is_signed BOOLEAN NOT NULL DEFAULT TRUE,
             signed_at TIMESTAMP WITH TIME ZONE,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     exec_sql("CREATE INDEX IF NOT EXISTS ix_clinical_notes_patient_id ON clinical_notes(patient_id)")
@@ -234,7 +234,7 @@ def upgrade() -> None:
             reviewed_by VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
             reviewed_at TIMESTAMP WITH TIME ZONE,
             review_comments TEXT,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
             completed_at TIMESTAMP WITH TIME ZONE
         )
     """)
@@ -258,8 +258,8 @@ def upgrade() -> None:
             reason_for_referral TEXT NOT NULL,
             clinical_summary TEXT,
             transport_requirements VARCHAR(255),
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
     exec_sql("CREATE INDEX IF NOT EXISTS ix_referrals_patient_id ON referrals(patient_id)")
@@ -270,228 +270,321 @@ def upgrade() -> None:
     # -------------------------------------------------------------
     # 2. ADD COLUMNS & CONSTRAINTS TO EXISTING TABLES
     # -------------------------------------------------------------
-    exec_sql("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='facility_id') THEN
-                ALTER TABLE users ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
-                CREATE INDEX ix_users_facility_id ON users(facility_id);
-            END IF;
-        END $$;
-    """)
+    bind = op.get_bind()
+    dialect = bind.dialect.name
 
-    exec_sql("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='patients' AND column_name='facility_id') THEN
-                ALTER TABLE patients ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
-                CREATE INDEX ix_patients_facility_id ON patients(facility_id);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='patients' AND column_name='user_id') THEN
-                ALTER TABLE patients ADD COLUMN user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL;
-                CREATE INDEX ix_patients_user_id ON patients(user_id);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='patients' AND column_name='is_active') THEN
-                ALTER TABLE patients ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;
-            END IF;
-        END $$;
-    """)
+    if dialect == "postgresql":
+        exec_sql("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='facility_id') THEN
+                    ALTER TABLE users ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_users_facility_id ON users(facility_id);
+                END IF;
+            END $$;
+        """)
 
-    exec_sql("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='facility_id') THEN
-                ALTER TABLE consultations ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
-                CREATE INDEX ix_consultations_facility_id ON consultations(facility_id);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='encounter_id') THEN
-                ALTER TABLE consultations ADD COLUMN encounter_id VARCHAR(36) REFERENCES encounters(id) ON DELETE SET NULL;
-                CREATE INDEX ix_consultations_encounter_id ON consultations(encounter_id);
-            END IF;
-        END $$;
-    """)
+        exec_sql("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='patients' AND column_name='facility_id') THEN
+                    ALTER TABLE patients ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_patients_facility_id ON patients(facility_id);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='patients' AND column_name='user_id') THEN
+                    ALTER TABLE patients ADD COLUMN user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_patients_user_id ON patients(user_id);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='patients' AND column_name='is_active') THEN
+                    ALTER TABLE patients ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;
+                END IF;
+            END $$;
+        """)
 
-    exec_sql("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='triage_cases' AND column_name='facility_id') THEN
-                ALTER TABLE triage_cases ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
-                CREATE INDEX ix_triage_cases_facility_id ON triage_cases(facility_id);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='triage_cases' AND column_name='encounter_id') THEN
-                ALTER TABLE triage_cases ADD COLUMN encounter_id VARCHAR(36) REFERENCES encounters(id) ON DELETE SET NULL;
-                CREATE INDEX ix_triage_cases_encounter_id ON triage_cases(encounter_id);
-            END IF;
-        END $$;
-    """)
+        exec_sql("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='facility_id') THEN
+                    ALTER TABLE consultations ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_consultations_facility_id ON consultations(facility_id);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='encounter_id') THEN
+                    ALTER TABLE consultations ADD COLUMN encounter_id VARCHAR(36) REFERENCES encounters(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_consultations_encounter_id ON consultations(encounter_id);
+                END IF;
+            END $$;
+        """)
 
-    exec_sql("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='audit_logs' AND column_name='facility_id') THEN
-                ALTER TABLE audit_logs ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
-                CREATE INDEX ix_audit_logs_facility_id ON audit_logs(facility_id);
-                CREATE INDEX ix_audit_logs_facility_timestamp ON audit_logs(facility_id, timestamp);
-            END IF;
-        END $$;
-    """)
+        exec_sql("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='triage_cases' AND column_name='facility_id') THEN
+                    ALTER TABLE triage_cases ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_triage_cases_facility_id ON triage_cases(facility_id);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='triage_cases' AND column_name='encounter_id') THEN
+                    ALTER TABLE triage_cases ADD COLUMN encounter_id VARCHAR(36) REFERENCES encounters(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_triage_cases_encounter_id ON triage_cases(encounter_id);
+                END IF;
+            END $$;
+        """)
 
-    exec_sql("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='consultation_id') THEN
-                ALTER TABLE documents ADD COLUMN consultation_id VARCHAR(36) REFERENCES consultations(id) ON DELETE SET NULL;
-                CREATE INDEX ix_documents_consultation_id ON documents(consultation_id);
-            END IF;
-        END $$;
-    """)
+        exec_sql("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='audit_logs' AND column_name='facility_id') THEN
+                    ALTER TABLE audit_logs ADD COLUMN facility_id VARCHAR(36) REFERENCES facilities(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_audit_logs_facility_id ON audit_logs(facility_id);
+                    CREATE INDEX ix_audit_logs_facility_timestamp ON audit_logs(facility_id, timestamp);
+                END IF;
+            END $$;
+        """)
 
-    # -------------------------------------------------------------
-    # 3. FIX CASCADE DELETE SAFETY ON CONSULTATIONS
-    # -------------------------------------------------------------
-    exec_sql("""
-        DO $$
-        BEGIN
-            ALTER TABLE consultations DROP CONSTRAINT IF EXISTS consultations_patient_id_fkey;
-            ALTER TABLE consultations ADD CONSTRAINT consultations_patient_id_fkey 
-                FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE RESTRICT;
+        exec_sql("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='consultation_id') THEN
+                    ALTER TABLE documents ADD COLUMN consultation_id VARCHAR(36) REFERENCES consultations(id) ON DELETE SET NULL;
+                    CREATE INDEX ix_documents_consultation_id ON documents(consultation_id);
+                END IF;
+            END $$;
+        """)
 
-            ALTER TABLE consultations DROP CONSTRAINT IF EXISTS consultations_doctor_id_fkey;
-            ALTER TABLE consultations ADD CONSTRAINT consultations_doctor_id_fkey 
-                FOREIGN KEY (doctor_id) REFERENCES users(id) ON DELETE RESTRICT;
-        EXCEPTION
-            WHEN OTHERS THEN
-                NULL;
-        END $$;
-    """)
+        # -------------------------------------------------------------
+        # 3. FIX CASCADE DELETE SAFETY ON CONSULTATIONS
+        # -------------------------------------------------------------
+        exec_sql("""
+            DO $$
+            BEGIN
+                ALTER TABLE consultations DROP CONSTRAINT IF EXISTS consultations_patient_id_fkey;
+                ALTER TABLE consultations ADD CONSTRAINT consultations_patient_id_fkey 
+                    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE RESTRICT;
 
-    # -------------------------------------------------------------
-    # 4. COMPOSITE INDEXES FOR SCALABLE QUERYING
-    # -------------------------------------------------------------
-    exec_sql("CREATE INDEX IF NOT EXISTS ix_consultations_patient_created ON consultations(patient_id, created_at)")
-    exec_sql("CREATE INDEX IF NOT EXISTS ix_triage_cases_status_created ON triage_cases(status, created_at)")
-    exec_sql("CREATE INDEX IF NOT EXISTS ix_triage_cases_facility_created ON triage_cases(facility_id, created_at)")
+                ALTER TABLE consultations DROP CONSTRAINT IF EXISTS consultations_doctor_id_fkey;
+                ALTER TABLE consultations ADD CONSTRAINT consultations_doctor_id_fkey 
+                    FOREIGN KEY (doctor_id) REFERENCES users(id) ON DELETE RESTRICT;
+            EXCEPTION
+                WHEN OTHERS THEN
+                    NULL;
+            END $$;
+        """)
 
-    # -------------------------------------------------------------
-    # 5. DATA MIGRATION & BACKFILL
-    # -------------------------------------------------------------
-    exec_sql("""
-        DO $$
-        DECLARE
-            default_fac_id VARCHAR(36);
-            james_patient_id VARCHAR(36);
-            patient_user_id VARCHAR(36);
-        BEGIN
-            SELECT id INTO default_fac_id FROM facilities WHERE facility_code = 'FAC-DISTRICT-01' LIMIT 1;
-            IF default_fac_id IS NOT NULL THEN
-                UPDATE users SET facility_id = default_fac_id WHERE facility_id IS NULL;
-                UPDATE patients SET facility_id = default_fac_id WHERE facility_id IS NULL;
-                UPDATE consultations SET facility_id = default_fac_id WHERE facility_id IS NULL;
-                UPDATE triage_cases SET facility_id = default_fac_id WHERE facility_id IS NULL;
-                UPDATE audit_logs SET facility_id = default_fac_id WHERE facility_id IS NULL;
-            END IF;
+        # -------------------------------------------------------------
+        # 4. COMPOSITE INDEXES FOR SCALABLE QUERYING
+        # -------------------------------------------------------------
+        exec_sql("CREATE INDEX IF NOT EXISTS ix_consultations_patient_created ON consultations(patient_id, created_at)")
+        exec_sql("CREATE INDEX IF NOT EXISTS ix_triage_cases_status_created ON triage_cases(status, created_at)")
+        exec_sql("CREATE INDEX IF NOT EXISTS ix_triage_cases_facility_created ON triage_cases(facility_id, created_at)")
 
-            SELECT id INTO patient_user_id FROM users WHERE email = 'patient@clinova.ai' LIMIT 1;
-            SELECT id INTO james_patient_id FROM patients WHERE email = 'patient@clinova.ai' OR mrn = 'CLN-2026-10482' LIMIT 1;
+        # -------------------------------------------------------------
+        # 5. DATA MIGRATION & BACKFILL
+        # -------------------------------------------------------------
+        exec_sql("""
+            DO $$
+            DECLARE
+                default_fac_id VARCHAR(36);
+                james_patient_id VARCHAR(36);
+                patient_user_id VARCHAR(36);
+            BEGIN
+                SELECT id INTO default_fac_id FROM facilities WHERE facility_code = 'FAC-DISTRICT-01' LIMIT 1;
+                IF default_fac_id IS NOT NULL THEN
+                    UPDATE users SET facility_id = default_fac_id WHERE facility_id IS NULL;
+                    UPDATE patients SET facility_id = default_fac_id WHERE facility_id IS NULL;
+                    UPDATE consultations SET facility_id = default_fac_id WHERE facility_id IS NULL;
+                    UPDATE triage_cases SET facility_id = default_fac_id WHERE facility_id IS NULL;
+                    UPDATE audit_logs SET facility_id = default_fac_id WHERE facility_id IS NULL;
+                END IF;
 
-            IF patient_user_id IS NOT NULL AND james_patient_id IS NOT NULL THEN
-                UPDATE patients SET user_id = patient_user_id WHERE id = james_patient_id;
-                UPDATE triage_cases SET patient_id = james_patient_id WHERE patient_id = patient_user_id;
-            END IF;
-        END $$;
-    """)
+                SELECT id INTO patient_user_id FROM users WHERE email = 'patient@clinova.ai' LIMIT 1;
+                SELECT id INTO james_patient_id FROM patients WHERE email = 'patient@clinova.ai' OR mrn = 'CLN-2026-10482' LIMIT 1;
 
-    exec_sql("""
-        INSERT INTO patient_identifiers (id, patient_id, identifier_type, identifier_value, issuing_system, is_primary, created_at, updated_at)
-        SELECT 
-            md5(p.id || 'mrn' || p.mrn)::uuid::text,
-            p.id,
-            'MRN'::identifiertype,
-            p.mrn,
-            'CLINOVA-EHR',
-            TRUE,
-            p.created_at,
-            p.updated_at
-        FROM patients p
-        ON CONFLICT (patient_id, identifier_type, identifier_value) DO NOTHING
-    """)
+                IF patient_user_id IS NOT NULL AND james_patient_id IS NOT NULL THEN
+                    UPDATE patients SET user_id = patient_user_id WHERE id = james_patient_id;
+                    UPDATE triage_cases SET patient_id = james_patient_id WHERE patient_id = patient_user_id;
+                END IF;
+            END $$;
+        """)
 
-    exec_sql("""
-        INSERT INTO allergies (id, patient_id, substance, reaction, severity, status, notes, verification_status, created_at, updated_at)
-        SELECT 
-            md5(p.id || 'allergy' || p.allergies)::uuid::text,
-            p.id,
-            TRIM(SPLIT_PART(p.allergies, '(', 1)),
-            NULLIF(TRIM(REPLACE(SPLIT_PART(p.allergies, '(', 2), ')', '')), ''),
-            CASE 
-                WHEN p.allergies ILIKE '%anaphylaxis%' THEN 'LIFE_THREATENING'::allergyseverity
-                WHEN p.allergies ILIKE '%severe%' THEN 'SEVERE'::allergyseverity
-                ELSE 'MODERATE'::allergyseverity
-            END,
-            'ACTIVE'::allergystatus,
-            'Migrated from historical free-text record: ' || p.allergies,
-            'confirmed',
-            p.created_at,
-            p.updated_at
-        FROM patients p
-        WHERE p.allergies IS NOT NULL 
-          AND TRIM(p.allergies) != '' 
-          AND p.allergies NOT ILIKE 'none%'
-        ON CONFLICT (id) DO NOTHING
-    """)
+        exec_sql("""
+            INSERT INTO patient_identifiers (id, patient_id, identifier_type, identifier_value, issuing_system, is_primary, created_at, updated_at)
+            SELECT 
+                md5(p.id || 'mrn' || p.mrn)::uuid::text,
+                p.id,
+                'MRN'::identifiertype,
+                p.mrn,
+                'CLINOVA-EHR',
+                TRUE,
+                p.created_at,
+                p.updated_at
+            FROM patients p
+            ON CONFLICT (patient_id, identifier_type, identifier_value) DO NOTHING
+        """)
 
-    exec_sql("""
-        DO $$
-        DECLARE
-            c_rec RECORD;
-            new_enc_id VARCHAR(36);
-        BEGIN
-            FOR c_rec IN SELECT id, patient_id, doctor_id, facility_id, scheduled_at, status, chief_complaint, created_at FROM consultations WHERE encounter_id IS NULL LOOP
-                new_enc_id := md5('enc_' || c_rec.id)::uuid::text;
-                
-                INSERT INTO encounters (id, patient_id, facility_id, attending_clinician_id, encounter_type, status, reason_for_visit, start_time, created_at, updated_at)
-                VALUES (
-                    new_enc_id,
-                    c_rec.patient_id,
-                    COALESCE(c_rec.facility_id, (SELECT id FROM facilities WHERE facility_code='FAC-DISTRICT-01' LIMIT 1)),
-                    c_rec.doctor_id,
-                    'OUTPATIENT'::encountertype,
-                    CASE WHEN UPPER(c_rec.status::text) = 'COMPLETED' THEN 'COMPLETED'::encounterstatus ELSE 'IN_PROGRESS'::encounterstatus END,
-                    c_rec.chief_complaint,
-                    c_rec.scheduled_at,
-                    c_rec.created_at,
-                    c_rec.created_at
-                ) ON CONFLICT (id) DO NOTHING;
+        exec_sql("""
+            INSERT INTO allergies (id, patient_id, substance, reaction, severity, status, notes, verification_status, created_at, updated_at)
+            SELECT 
+                md5(p.id || 'allergy' || p.allergies)::uuid::text,
+                p.id,
+                TRIM(SPLIT_PART(p.allergies, '(', 1)),
+                NULLIF(TRIM(REPLACE(SPLIT_PART(p.allergies, '(', 2), ')', '')), ''),
+                CASE 
+                    WHEN p.allergies ILIKE '%anaphylaxis%' THEN 'LIFE_THREATENING'::allergyseverity
+                    WHEN p.allergies ILIKE '%severe%' THEN 'SEVERE'::allergyseverity
+                    ELSE 'MODERATE'::allergyseverity
+                END,
+                'ACTIVE'::allergystatus,
+                'Migrated from historical free-text record: ' || p.allergies,
+                'confirmed',
+                p.created_at,
+                p.updated_at
+            FROM patients p
+            WHERE p.allergies IS NOT NULL 
+              AND TRIM(p.allergies) != '' 
+              AND p.allergies NOT ILIKE 'none%'
+            ON CONFLICT (id) DO NOTHING
+        """)
 
-                UPDATE consultations SET encounter_id = new_enc_id WHERE id = c_rec.id;
-            END LOOP;
-        END $$;
-    """)
+        exec_sql("""
+            DO $$
+            DECLARE
+                c_rec RECORD;
+                new_enc_id VARCHAR(36);
+            BEGIN
+                FOR c_rec IN SELECT id, patient_id, doctor_id, facility_id, scheduled_at, status, chief_complaint, created_at FROM consultations WHERE encounter_id IS NULL LOOP
+                    new_enc_id := md5('enc_' || c_rec.id)::uuid::text;
+                    
+                    INSERT INTO encounters (id, patient_id, facility_id, attending_clinician_id, encounter_type, status, reason_for_visit, start_time, created_at, updated_at)
+                    VALUES (
+                        new_enc_id,
+                        c_rec.patient_id,
+                        COALESCE(c_rec.facility_id, (SELECT id FROM facilities WHERE facility_code='FAC-DISTRICT-01' LIMIT 1)),
+                        c_rec.doctor_id,
+                        'OUTPATIENT'::encountertype,
+                        CASE WHEN UPPER(c_rec.status::text) = 'COMPLETED' THEN 'COMPLETED'::encounterstatus ELSE 'IN_PROGRESS'::encounterstatus END,
+                        c_rec.chief_complaint,
+                        c_rec.scheduled_at,
+                        c_rec.created_at,
+                        c_rec.created_at
+                    ) ON CONFLICT (id) DO NOTHING;
 
-    exec_sql("""
-        INSERT INTO clinical_notes (id, patient_id, encounter_id, consultation_id, author_id, note_type, status, title, content, version, is_signed, created_at, updated_at)
-        SELECT
-            md5('note_' || c.id)::uuid::text,
-            c.patient_id,
-            c.encounter_id,
-            c.id,
-            c.doctor_id,
-            'SOAP'::notetype,
-            'FINALIZED'::notestatus,
-            'Initial Clinical Assessment — ' || c.chief_complaint,
-            'SUBJECTIVE: ' || COALESCE(c.subjective, 'N/A') || E'\n\n' ||
-            'OBJECTIVE: ' || COALESCE(c.objective, 'N/A') || E'\n\n' ||
-            'ASSESSMENT: ' || COALESCE(c.assessment, 'N/A') || E'\n\n' ||
-            'PLAN: ' || COALESCE(c.plan, 'N/A'),
-            1,
-            TRUE,
-            c.created_at,
-            c.updated_at
-        FROM consultations c
-        WHERE (c.subjective IS NOT NULL OR c.objective IS NOT NULL OR c.assessment IS NOT NULL OR c.plan IS NOT NULL)
-          AND c.encounter_id IS NOT NULL
-        ON CONFLICT (id) DO NOTHING
-    """)
+                    UPDATE consultations SET encounter_id = new_enc_id WHERE id = c_rec.id;
+                END LOOP;
+            END $$;
+        """)
+
+        exec_sql("""
+            INSERT INTO clinical_notes (id, patient_id, encounter_id, consultation_id, author_id, note_type, status, title, content, version, is_signed, created_at, updated_at)
+            SELECT
+                md5('note_' || c.id)::uuid::text,
+                c.patient_id,
+                c.encounter_id,
+                c.id,
+                c.doctor_id,
+                'SOAP'::notetype,
+                'FINALIZED'::notestatus,
+                'Initial Clinical Assessment — ' || c.chief_complaint,
+                'SUBJECTIVE: ' || COALESCE(c.subjective, 'N/A') || E'\n\n' ||
+                'OBJECTIVE: ' || COALESCE(c.objective, 'N/A') || E'\n\n' ||
+                'ASSESSMENT: ' || COALESCE(c.assessment, 'N/A') || E'\n\n' ||
+                'PLAN: ' || COALESCE(c.plan, 'N/A'),
+                1,
+                TRUE,
+                c.created_at,
+                c.updated_at
+            FROM consultations c
+            WHERE (c.subjective IS NOT NULL OR c.objective IS NOT NULL OR c.assessment IS NOT NULL OR c.plan IS NOT NULL)
+              AND c.encounter_id IS NOT NULL
+            ON CONFLICT (id) DO NOTHING
+        """)
+    else:
+        # Cross-platform / SQLite fallback handling
+        from sqlalchemy import inspect
+        inspector = inspect(bind)
+        if inspector.has_table("users"):
+            cols = {c["name"] for c in inspector.get_columns("users")}
+            if "facility_id" not in cols:
+                try:
+                    op.add_column("users", sa.Column("facility_id", sa.String(36), sa.ForeignKey("facilities.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_users_facility_id", "users", ["facility_id"])
+                except Exception:
+                    pass
+        if inspector.has_table("patients"):
+            cols = {c["name"] for c in inspector.get_columns("patients")}
+            if "facility_id" not in cols:
+                try:
+                    op.add_column("patients", sa.Column("facility_id", sa.String(36), sa.ForeignKey("facilities.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_patients_facility_id", "patients", ["facility_id"])
+                except Exception:
+                    pass
+            if "user_id" not in cols:
+                try:
+                    op.add_column("patients", sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_patients_user_id", "patients", ["user_id"])
+                except Exception:
+                    pass
+            if "is_active" not in cols:
+                try:
+                    op.add_column("patients", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()))
+                except Exception:
+                    pass
+        if inspector.has_table("consultations"):
+            cols = {c["name"] for c in inspector.get_columns("consultations")}
+            if "facility_id" not in cols:
+                try:
+                    op.add_column("consultations", sa.Column("facility_id", sa.String(36), sa.ForeignKey("facilities.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_consultations_facility_id", "consultations", ["facility_id"])
+                except Exception:
+                    pass
+            if "encounter_id" not in cols:
+                try:
+                    op.add_column("consultations", sa.Column("encounter_id", sa.String(36), sa.ForeignKey("encounters.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_consultations_encounter_id", "consultations", ["encounter_id"])
+                except Exception:
+                    pass
+        if inspector.has_table("triage_cases"):
+            cols = {c["name"] for c in inspector.get_columns("triage_cases")}
+            if "facility_id" not in cols:
+                try:
+                    op.add_column("triage_cases", sa.Column("facility_id", sa.String(36), sa.ForeignKey("facilities.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_triage_cases_facility_id", "triage_cases", ["facility_id"])
+                except Exception:
+                    pass
+            if "encounter_id" not in cols:
+                try:
+                    op.add_column("triage_cases", sa.Column("encounter_id", sa.String(36), sa.ForeignKey("encounters.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_triage_cases_encounter_id", "triage_cases", ["encounter_id"])
+                except Exception:
+                    pass
+        if inspector.has_table("audit_logs"):
+            cols = {c["name"] for c in inspector.get_columns("audit_logs")}
+            if "facility_id" not in cols:
+                try:
+                    op.add_column("audit_logs", sa.Column("facility_id", sa.String(36), sa.ForeignKey("facilities.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_audit_logs_facility_id", "audit_logs", ["facility_id"])
+                    op.create_index("ix_audit_logs_facility_timestamp", "audit_logs", ["facility_id", "timestamp"])
+                except Exception:
+                    pass
+        if inspector.has_table("documents"):
+            cols = {c["name"] for c in inspector.get_columns("documents")}
+            if "consultation_id" not in cols:
+                try:
+                    op.add_column("documents", sa.Column("consultation_id", sa.String(36), sa.ForeignKey("consultations.id", ondelete="SET NULL"), nullable=True))
+                    op.create_index("ix_documents_consultation_id", "documents", ["consultation_id"])
+                except Exception:
+                    pass
+
+        try:
+            exec_sql("CREATE INDEX IF NOT EXISTS ix_consultations_patient_created ON consultations(patient_id, created_at)")
+        except Exception:
+            pass
+        try:
+            exec_sql("CREATE INDEX IF NOT EXISTS ix_triage_cases_status_created ON triage_cases(status, created_at)")
+        except Exception:
+            pass
+        try:
+            exec_sql("CREATE INDEX IF NOT EXISTS ix_triage_cases_facility_created ON triage_cases(facility_id, created_at)")
+        except Exception:
+            pass
 
 
 def downgrade() -> None:

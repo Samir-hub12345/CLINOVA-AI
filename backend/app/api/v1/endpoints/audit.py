@@ -11,6 +11,8 @@ from sqlalchemy import select, desc
 
 from app.db.session import get_db
 from app.db.models import AuditLog
+from app.core.auth import get_current_actor, ActorContext
+from app.core.rbac import Permission, check_role_permission
 
 router = APIRouter()
 
@@ -22,8 +24,10 @@ async def get_audit_logs(
     actor_id: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
 ):
     """Returns immutable medicolegal audit entries."""
+    check_role_permission(actor.role, Permission.AUDIT_READ)
     stmt = select(AuditLog).order_by(desc(AuditLog.timestamp)).limit(limit)
 
     if case_id:

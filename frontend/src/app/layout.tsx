@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "@/components/common/header";
-import { Footer } from "@/components/common/footer";
-import { SafetyBanner } from "@/components/common/safety-banner";
+import { AppShell } from "@/components/common/AppShell";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
@@ -29,12 +27,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full bg-slate-50 text-slate-900 antialiased">
-      <body className="flex min-h-full flex-col font-sans">
-        <SafetyBanner />
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+    <html lang="en">
+      <body>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

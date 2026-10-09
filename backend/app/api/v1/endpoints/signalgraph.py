@@ -14,6 +14,13 @@ from sqlalchemy.orm import selectinload
 from app.db.session import get_db
 from app.db.models import Facility
 from app.domain.signalgraph.engine import signal_engine
+from app.core.auth import get_current_actor, ActorContext
+from app.core.rbac import (
+    ROLE_SYSTEM_ADMIN,
+    ROLE_AUDITOR,
+    ROLE_PATIENT,
+)
+from app.core.errors import ClinovaAPIError
 
 router = APIRouter()
 
@@ -77,11 +84,29 @@ async def get_macro_summary(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/inject-event", tags=["SignalGraph"])
-async def inject_synthetic_event(req: InjectEventRequest):
+async def inject_synthetic_event(
+    req: InjectEventRequest,
+    actor: ActorContext = Depends(get_current_actor),
+):
     """
     Ingests synthetic clinical encounter signal into the real-time event pipeline.
     Used for automated scenario validation and outbreak simulation.
     """
+    if actor.role == ROLE_PATIENT:
+        raise ClinovaAPIError(
+            category="AUTHORIZATION_ERROR",
+            message="Patients are not authorized to inject operational telemetry signals.",
+            status_code=403,
+        )
+
+    if actor.role not in {ROLE_SYSTEM_ADMIN, ROLE_AUDITOR, "RESEARCHER", "HARNESS"}:
+        if actor.facility_id and req.facility_id and actor.facility_id != req.facility_id:
+            raise ClinovaAPIError(
+                category="AUTHORIZATION_ERROR",
+                message=f"Cannot inject telemetry signal for out-of-scope facility '{req.facility_id}'.",
+                status_code=403,
+            )
+
     ev = signal_engine.record_event(
         facility_id=req.facility_id,
         syndrome_tag=req.syndrome_tag,
@@ -92,3 +117,16 @@ async def inject_synthetic_event(req: InjectEventRequest):
         "event": ev,
         "current_clusters": signal_engine.get_syndromic_clusters()["clusters"],
     }
+
+
+@router.get("/outcomes", tags=["SignalGraph"])
+async def get_outcome_telemetry(
+    facility_id: Optional[str] = None,
+    window_hours: int = 48,
+):
+    """
+    Returns aggregated de-identified outcome telemetry across facilities.
+    Strictly zero PHI. Preserves unknown status without false optimism.
+    """
+    return signal_engine.get_outcome_metrics(facility_id=facility_id, window_hours=window_hours)
+

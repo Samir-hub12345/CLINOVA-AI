@@ -17,6 +17,9 @@ from app.db.init_db import init_db
 @pytest.fixture(autouse=True)
 async def setup_database():
     """Initializes and seeds database before running acceptance tests."""
+    from app.core.config import settings
+    settings.ALLOW_LEGACY_ACTOR_HEADERS = True
+    settings.ALLOW_LEGACY_ANONYMOUS_FALLBACK = True
     await init_db()
 
 
@@ -80,10 +83,13 @@ async def test_acceptance_gate_2_facilitygraph_feasibility_toggle():
         assert m1.status_code == 200
         assert m1.json()["feasibility"]["status"] == "FEASIBLE"
 
+        admin_headers = {"X-Actor-Id": "usr-admin-03", "X-Facility-Id": "FAC-DH-04"}
+
         # Toggle CT scanner offline (e.g. tube replacement maintenance)
         t_res = await client.post(
             "/api/v1/facilities/FAC-DH-04/toggle-capability",
             json={"capability_code": "CT_SCAN_24_7", "is_operational": False, "maintenance_note": "Tube defect"},
+            headers=admin_headers,
         )
         assert t_res.status_code == 200
         assert t_res.json()["is_operational"] is False
@@ -101,6 +107,7 @@ async def test_acceptance_gate_2_facilitygraph_feasibility_toggle():
         await client.post(
             "/api/v1/facilities/FAC-DH-04/toggle-capability",
             json={"capability_code": "CT_SCAN_24_7", "is_operational": True},
+            headers=admin_headers,
         )
 
 

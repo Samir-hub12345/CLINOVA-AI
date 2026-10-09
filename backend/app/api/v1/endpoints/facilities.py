@@ -18,6 +18,17 @@ from app.domain.facilitygraph.engine import (
     rank_referral_destinations,
     CARE_BUNDLES,
 )
+from app.core.auth import get_current_actor, ActorContext
+from app.core.rbac import (
+    Permission,
+    check_role_permission,
+    ROLE_FACILITY_ADMIN,
+    ROLE_SYSTEM_ADMIN,
+    ROLE_AUDITOR,
+    ROLE_CLINICIAN,
+)
+from app.core.policy import authorize_facility_access
+from app.core.errors import ClinovaAPIError
 
 router = APIRouter()
 
@@ -185,11 +196,15 @@ async def toggle_facility_capability(
     facility_id: str,
     req: ToggleCapabilityRequest,
     db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
 ):
     """
     Enables/disables a capability (e.g., setting CT scanner offline).
     Used to demonstrate dynamic care feasibility flipping.
     """
+    check_role_permission(actor.role, Permission.FACILITY_ADMIN_MANAGE)
+    await authorize_facility_access(facility_id, actor, db=db)
+
     stmt = (
         select(FacilityCapability)
         .where(
@@ -213,7 +228,7 @@ async def toggle_facility_capability(
         cap.maintenance_note = req.maintenance_note
 
     audit = AuditLog(
-        actor_id="FACILITY_ADMIN",
+        actor_id=actor.actor_id,
         action="CAPABILITY_TOGGLED",
         entity_type="FACILITY",
         entity_id=facility_id,
@@ -221,6 +236,7 @@ async def toggle_facility_capability(
             "capability_code": req.capability_code,
             "is_operational": req.is_operational,
             "maintenance_note": req.maintenance_note,
+            "actor_role": actor.role,
         },
     )
     db.add(audit)
@@ -239,11 +255,15 @@ async def update_facility_capacity(
     facility_id: str,
     req: UpdateCapacityRequest,
     db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
 ):
     """Updates real-time bed availability and ED wait time to test capacity shifts."""
+    check_role_permission(actor.role, Permission.FACILITY_ADMIN_MANAGE)
+    await authorize_facility_access(facility_id, actor, db=db)
+
     fac = await db.get(Facility, facility_id)
     if not fac:
-        raise HTTPException(status_code=404, detail="Facility not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message="Facility not found.", status_code=404)
 
     if req.icu_beds_available is not None:
         fac.icu_beds_available = req.icu_beds_available
@@ -255,11 +275,14 @@ async def update_facility_capacity(
         fac.ed_avg_wait_min = req.ed_avg_wait_min
 
     audit = AuditLog(
-        actor_id="FACILITY_ADMIN",
+        actor_id=actor.actor_id,
         action="CAPACITY_UPDATED",
         entity_type="FACILITY",
         entity_id=facility_id,
-        details=req.model_dump(exclude_none=True),
+        details={
+            **req.model_dump(exclude_none=True),
+            "actor_role": actor.role,
+        },
     )
     db.add(audit)
     await db.commit()

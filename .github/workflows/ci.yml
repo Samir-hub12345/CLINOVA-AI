@@ -35,16 +35,17 @@ jobs:
 
       - name: Run Test Suite
         env:
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          DATABASE_URL: sqlite+aiosqlite:///./test_ci.db
           DEBUG: "false"
-          LLM_PROVIDER: mock
-          GEMINI_API_KEY: ""
+          ENVIRONMENT: "testing"
+          AI_PROVIDER_MODE: MOCK_DETERMINISTIC
+          SECRET_KEY: "clinova-test-ci-secret-key-32chars-minimum-2026!"
         run: |
           cd backend
           python -m pytest tests/ -v --tb=short
 
   frontend-quality-and-build:
-    name: Frontend Typecheck, Lint & Build
+    name: Frontend Typecheck, Lint, Test & Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -67,6 +68,16 @@ jobs:
           cd frontend
           npm run typecheck
 
+      - name: Lint
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Offline Queue Unit Tests
+        run: |
+          cd frontend
+          npm run test:offline
+
       - name: Production Build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
@@ -81,6 +92,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Validate Docker Compose Config
+      - name: Validate Production Docker Compose Config
         run: |
-          docker compose config
+          docker compose -f infrastructure/docker/docker-compose.prod.yml config

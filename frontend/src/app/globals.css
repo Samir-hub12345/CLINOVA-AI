@@ -1,74 +1,800 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ==========================================================================
+   CLINOVA AI — GLOBAL DESIGN SYSTEM & SEMANTIC TOKENS
+   Phase 12: Production UI Foundation & Core Workbench Shell
+   Zero Utility Frameworks • Pure W3C CSS Custom Properties • WCAG 2.1 AA
+   ========================================================================== */
 
 :root {
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --primary: 174 85% 31%; /* Medical Teal */
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222 47% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 199 89% 48%; /* Clinical Blue */
-  --accent-foreground: 222 47% 11.2%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 174 85% 31%;
-  --radius: 0.5rem;
+  /* Surface & Canvas Foundation */
+  --clinova-bg: #f8fafc;
+  --clinova-surface: #ffffff;
+  --clinova-surface-elevated: #ffffff;
+  --clinova-surface-subtle: #f1f5f9;
+  --clinova-surface-highlight: #f8fafc;
+  --clinova-backdrop: rgba(15, 23, 42, 0.5);
+
+  /* Borders & Dividers */
+  --clinova-border: #e2e8f0;
+  --clinova-border-subtle: #cbd5e1;
+  --clinova-border-strong: #94a3b8;
+  --clinova-border-dark: #334155;
+
+  /* Typography / Text Palette */
+  --clinova-text-primary: #0f172a;
+  --clinova-text-secondary: #334155;
+  --clinova-text-muted: #64748b;
+  --clinova-text-inverse: #ffffff;
+
+  /* Brand / Clinical Accent (Medical Teal & Clinical Slate) */
+  --clinova-accent: #0d9488;
+  --clinova-accent-hover: #0f766e;
+  --clinova-accent-active: #115e59;
+  --clinova-accent-light: #f0fdfa;
+  --clinova-accent-border: #99f6e4;
+  --clinova-accent-text: #0f766e;
+
+  --clinova-clinical-navy: #0f172a;
+  --clinova-clinical-blue: #0284c7;
+  --clinova-clinical-blue-light: #f0f9ff;
+  --clinova-clinical-blue-border: #bae6fd;
+
+  /* Clinical Acuity & Urgency Semantics */
+  --clinova-emergency: #b91c1c;
+  --clinova-emergency-bg: #fef2f2;
+  --clinova-emergency-border: #fca5a5;
+  --clinova-emergency-text: #991b1b;
+
+  --clinova-danger: #dc2626;
+  --clinova-danger-bg: #fef2f2;
+  --clinova-danger-border: #fecaca;
+  --clinova-danger-text: #b91c1c;
+
+  --clinova-warning: #d97706;
+  --clinova-warning-bg: #fffbeb;
+  --clinova-warning-border: #fde68a;
+  --clinova-warning-text: #b45309;
+
+  --clinova-informational: #0284c7;
+  --clinova-informational-bg: #f0f9ff;
+  --clinova-informational-border: #bae6fd;
+  --clinova-informational-text: #0369a1;
+
+  --clinova-success: #16a34a;
+  --clinova-success-bg: #f0fdf4;
+  --clinova-success-border: #bbf7d0;
+  --clinova-success-text: #15803d;
+
+  /* Provenance Semantics */
+  --clinova-prov-clinician: #047857;
+  --clinova-prov-clinician-bg: #ecfdf5;
+  --clinova-prov-clinician-border: #a7f3d0;
+
+  --clinova-prov-patient: #0369a1;
+  --clinova-prov-patient-bg: #f0f9ff;
+  --clinova-prov-patient-border: #bae6fd;
+
+  --clinova-prov-voice: #6d28d9;
+  --clinova-prov-voice-bg: #f5f3ff;
+  --clinova-prov-voice-border: #ddd6fe;
+
+  --clinova-prov-ocr: #7c2d12;
+  --clinova-prov-ocr-bg: #fff7ed;
+  --clinova-prov-ocr-border: #ffedd5;
+
+  --clinova-prov-ai: #b45309;
+  --clinova-prov-ai-bg: #fffbeb;
+  --clinova-prov-ai-border: #fde68a;
+
+  --clinova-prov-staff: #334155;
+  --clinova-prov-staff-bg: #f1f5f9;
+  --clinova-prov-staff-border: #cbd5e1;
+
+  --clinova-prov-system: #475569;
+  --clinova-prov-system-bg: #f8fafc;
+  --clinova-prov-system-border: #e2e8f0;
+
+  /* Epistemic Uncertainty Semantics */
+  --clinova-epistemic-verified: #047857;
+  --clinova-epistemic-verified-bg: #ecfdf5;
+  --clinova-epistemic-verified-border: #a7f3d0;
+
+  --clinova-epistemic-known: #0369a1;
+  --clinova-epistemic-known-bg: #f0f9ff;
+  --clinova-epistemic-known-border: #bae6fd;
+
+  --clinova-epistemic-inferred: #c2410c;
+  --clinova-epistemic-inferred-bg: #fff7ed;
+  --clinova-epistemic-inferred-border: #fed7aa;
+
+  --clinova-epistemic-conflicting: #be123c;
+  --clinova-epistemic-conflicting-bg: #fff1f2;
+  --clinova-epistemic-conflicting-border: #fecdd3;
+
+  --clinova-epistemic-unknown: #475569;
+  --clinova-epistemic-unknown-bg: #f1f5f9;
+  --clinova-epistemic-unknown-border: #cbd5e1;
+
+  --clinova-epistemic-unreliable: #a16207;
+  --clinova-epistemic-unreliable-bg: #fefce8;
+  --clinova-epistemic-unreliable-border: #fef08a;
+
+  /* Section 8 Specified Semantic Token Aliases */
+  --clinova-verified: var(--clinova-epistemic-verified);
+  --clinova-verified-bg: var(--clinova-epistemic-verified-bg);
+  --clinova-verified-border: var(--clinova-epistemic-verified-border);
+
+  --clinova-inferred: var(--clinova-epistemic-inferred);
+  --clinova-inferred-bg: var(--clinova-epistemic-inferred-bg);
+  --clinova-inferred-border: var(--clinova-epistemic-inferred-border);
+
+  --clinova-conflicting: var(--clinova-epistemic-conflicting);
+  --clinova-conflicting-bg: var(--clinova-epistemic-conflicting-bg);
+  --clinova-conflicting-border: var(--clinova-epistemic-conflicting-border);
+
+  --clinova-unknown: var(--clinova-epistemic-unknown);
+  --clinova-unknown-bg: var(--clinova-epistemic-unknown-bg);
+  --clinova-unknown-border: var(--clinova-epistemic-unknown-border);
+
+  /* Connectivity / Offline State */
+  --clinova-online: #16a34a;
+  --clinova-offline: #64748b;
+  --clinova-syncing: #0284c7;
+  --clinova-sync-error: #dc2626;
+
+  /* Focus & Accessibility */
+  --clinova-focus-ring: #0d9488;
+  --clinova-focus-ring-offset: 2px;
+
+  /* Elevation Shadows */
+  --clinova-shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --clinova-shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --clinova-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --clinova-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+  --clinova-shadow-drawer: -4px 0 24px rgba(15, 23, 42, 0.15);
+
+  /* Radii */
+  --clinova-radius-xs: 3px;
+  --clinova-radius-sm: 6px;
+  --clinova-radius-md: 8px;
+  --clinova-radius-lg: 12px;
+  --clinova-radius-xl: 16px;
+  --clinova-radius-pill: 9999px;
+
+  /* Typography Stacks */
+  --clinova-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --clinova-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Spacing Scale */
+  --clinova-space-1: 4px;
+  --clinova-space-2: 8px;
+  --clinova-space-3: 12px;
+  --clinova-space-4: 16px;
+  --clinova-space-5: 20px;
+  --clinova-space-6: 24px;
+  --clinova-space-8: 32px;
+  --clinova-space-10: 40px;
+  --clinova-space-12: 48px;
 }
 
-.dark {
-  --background: 224 71% 4%;
-  --foreground: 213 31% 91%;
-  --card: 224 71% 7%;
-  --card-foreground: 213 31% 91%;
-  --primary: 174 75% 42%;
-  --primary-foreground: 222 47% 11.2%;
-  --secondary: 222.2 47.4% 11.2%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 223 47% 11%;
-  --muted-foreground: 215.4 16.3% 56.9%;
-  --accent: 199 89% 48%;
-  --accent-foreground: 210 40% 98%;
-  --border: 216 34% 17%;
-  --input: 216 34% 17%;
-  --ring: 174 75% 42%;
+/* ==========================================================================
+   CSS Reset & Fundamental Document Box Model
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-body {
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+html, body {
+  min-height: 100%;
+  font-family: var(--clinova-font-sans);
+  background-color: var(--clinova-bg);
+  color: var(--clinova-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img, svg, picture, video {
+  display: block;
+  max-width: 100%;
+}
+
+input, button, textarea, select {
+  font: inherit;
+}
+
+/* Accessibility Focus States */
+:focus-visible {
+  outline: 2px solid var(--clinova-focus-ring);
+  outline-offset: var(--clinova-focus-ring-offset);
+}
+
+/* Reduced Motion Preference (Safety & Vestibular Health) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Typography Hierarchy & Presets
+   Strictly NO gradient text on headings.
+   ========================================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--clinova-text-primary);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+h1 { font-size: 1.875rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.125rem; }
+h5 { font-size: 1rem; }
+h6 { font-size: 0.875rem; }
+
+p {
+  color: var(--clinova-text-secondary);
+  font-size: 0.9375rem;
+}
+
+.clinova-mono {
+  font-family: var(--clinova-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.clinova-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clinova-text-muted);
+}
+
+.clinova-metadata {
+  font-size: 0.8125rem;
+  color: var(--clinova-text-muted);
+}
+
+/* ==========================================================================
+   Structural Layout Primitives
+   ========================================================================== */
+
+.clinova-shell {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  background-color: var(--clinova-bg);
 }
 
-/* --------------------------------------------------------------------------
-   Low-Bandwidth & Rural Facility Optimizations
-   Disables heavy GPU effects, simplifies shadows, and suspends animations.
--------------------------------------------------------------------------- */
-html.low-bandwidth * {
-  /* Reduce GPU render cycles and battery draw */
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+.clinova-container {
+  width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--clinova-space-4);
+  padding-right: var(--clinova-space-4);
 }
 
-html.low-bandwidth .shadow-lg,
-html.low-bandwidth .shadow-xl,
-html.low-bandwidth .shadow-2xl {
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1) !important;
+@media (min-width: 768px) {
+  .clinova-container {
+    padding-left: var(--clinova-space-6);
+    padding-right: var(--clinova-space-6);
+  }
 }
 
-html.low-bandwidth .animate-pulse,
-html.low-bandwidth .animate-bounce,
-html.low-bandwidth .animate-spin {
-  animation-duration: 2.5s !important;
+@media (min-width: 1280px) {
+  .clinova-container {
+    padding-left: var(--clinova-space-8);
+    padding-right: var(--clinova-space-8);
+  }
 }
 
-html.low-bandwidth .decorative-graphic {
-  display: none !important;
+.clinova-main {
+  flex: 1;
+  padding-top: var(--clinova-space-6);
+  padding-bottom: var(--clinova-space-8);
 }
 
+/* 3-Column Asymmetric Doctor Workbench Layout */
+.clinova-workbench-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--clinova-space-6);
+}
+
+@media (min-width: 1024px) {
+  .clinova-workbench-grid {
+    grid-template-columns: 300px minmax(0, 1fr) 360px;
+    align-items: start;
+  }
+}
+
+/* 2-Column Responsive Layout */
+.clinova-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--clinova-space-6);
+}
+
+@media (min-width: 768px) {
+  .clinova-grid-2col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 3-Column Responsive Layout */
+.clinova-grid-3col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--clinova-space-4);
+}
+
+@media (min-width: 640px) {
+  .clinova-grid-3col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .clinova-grid-3col {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 4-Column Metric Grid */
+.clinova-grid-4col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--clinova-space-4);
+}
+
+@media (min-width: 640px) {
+  .clinova-grid-4col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .clinova-grid-4col {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Flexbox Helper Utilities */
+.clinova-flex {
+  display: flex;
+}
+
+.clinova-flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.clinova-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.clinova-items-center {
+  align-items: center;
+}
+
+.clinova-items-start {
+  align-items: flex-start;
+}
+
+.clinova-justify-between {
+  justify-content: space-between;
+}
+
+.clinova-justify-center {
+  justify-content: center;
+}
+
+.clinova-gap-1 { gap: var(--clinova-space-1); }
+.clinova-gap-2 { gap: var(--clinova-space-2); }
+.clinova-gap-3 { gap: var(--clinova-space-3); }
+.clinova-gap-4 { gap: var(--clinova-space-4); }
+.clinova-gap-6 { gap: var(--clinova-space-6); }
+
+/* ==========================================================================
+   UI Component Classes (Non-Utility Design Foundation)
+   ========================================================================== */
+
+/* Cards & Panels */
+.clinova-card {
+  background-color: var(--clinova-surface);
+  border: 1px solid var(--clinova-border);
+  border-radius: var(--clinova-radius-lg);
+  box-shadow: var(--clinova-shadow-sm);
+  padding: var(--clinova-space-5);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.clinova-card:hover {
+  border-color: var(--clinova-border-strong);
+}
+
+.clinova-card-elevated {
+  background-color: var(--clinova-surface-elevated);
+  border: 1px solid var(--clinova-border);
+  border-radius: var(--clinova-radius-lg);
+  box-shadow: var(--clinova-shadow-md);
+  padding: var(--clinova-space-6);
+}
+
+.clinova-card-interactive {
+  cursor: pointer;
+}
+
+.clinova-card-interactive:hover {
+  box-shadow: var(--clinova-shadow-md);
+  border-color: var(--clinova-accent);
+}
+
+/* Banner Primitives */
+.clinova-banner-demo {
+  background-color: #fef3c7;
+  border-bottom: 1px solid #fcd34d;
+  color: #78350f;
+  padding: var(--clinova-space-2) var(--clinova-space-4);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--clinova-space-2);
+  text-align: center;
+}
+
+.clinova-banner-env {
+  background-color: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  color: #f8fafc;
+  padding: 4px var(--clinova-space-4);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.clinova-banner-emergency {
+  background-color: var(--clinova-emergency-bg);
+  border: 2px solid var(--clinova-emergency);
+  border-radius: var(--clinova-radius-md);
+  color: var(--clinova-emergency-text);
+  padding: var(--clinova-space-4);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--clinova-space-3);
+  box-shadow: 0 0 0 4px rgba(185, 28, 28, 0.1);
+}
+
+/* Badges */
+.clinova-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--clinova-space-1);
+  padding: 2px var(--clinova-space-2);
+  border-radius: var(--clinova-radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Buttons (Touch-target minimum 48px where appropriate, compact in desktop table) */
+.clinova-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--clinova-space-2);
+  font-weight: 600;
+  border-radius: var(--clinova-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 38px;
+  padding: 0 var(--clinova-space-4);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.clinova-btn-lg {
+  min-height: 48px; /* 48px Touch Target */
+  padding: 0 var(--clinova-space-6);
+  font-size: 0.9375rem;
+}
+
+.clinova-btn-sm {
+  min-height: 30px;
+  padding: 0 var(--clinova-space-3);
+  font-size: 0.75rem;
+}
+
+.clinova-btn-primary {
+  background-color: var(--clinova-accent);
+  color: var(--clinova-text-inverse);
+  border-color: var(--clinova-accent-hover);
+}
+.clinova-btn-primary:hover:not(:disabled) {
+  background-color: var(--clinova-accent-hover);
+}
+
+.clinova-btn-secondary {
+  background-color: var(--clinova-surface);
+  color: var(--clinova-text-primary);
+  border-color: var(--clinova-border-subtle);
+}
+.clinova-btn-secondary:hover:not(:disabled) {
+  background-color: var(--clinova-surface-subtle);
+  border-color: var(--clinova-border-strong);
+}
+
+.clinova-btn-outline {
+  background-color: transparent;
+  color: var(--clinova-text-secondary);
+  border-color: var(--clinova-border-subtle);
+}
+.clinova-btn-outline:hover:not(:disabled) {
+  background-color: var(--clinova-surface-subtle);
+  color: var(--clinova-text-primary);
+}
+
+.clinova-btn-danger {
+  background-color: var(--clinova-danger);
+  color: var(--clinova-text-inverse);
+  border-color: #b91c1c;
+}
+.clinova-btn-danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.clinova-btn-emergency {
+  background-color: var(--clinova-emergency);
+  color: var(--clinova-text-inverse);
+  font-weight: 700;
+  border-color: #7f1d1d;
+  box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.2);
+}
+.clinova-btn-emergency:hover:not(:disabled) {
+  background-color: #991b1b;
+}
+
+.clinova-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Icon Button */
+.clinova-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--clinova-radius-md);
+  border: 1px solid var(--clinova-border-subtle);
+  background-color: var(--clinova-surface);
+  color: var(--clinova-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clinova-icon-btn:hover:not(:disabled) {
+  background-color: var(--clinova-surface-subtle);
+  color: var(--clinova-text-primary);
+}
+
+/* Tables */
+.clinova-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--clinova-border);
+  border-radius: var(--clinova-radius-lg);
+  background-color: var(--clinova-surface);
+}
+
+.clinova-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.clinova-table th {
+  background-color: var(--clinova-surface-subtle);
+  color: var(--clinova-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--clinova-space-3) var(--clinova-space-4);
+  border-bottom: 1px solid var(--clinova-border);
+}
+
+.clinova-table td {
+  padding: var(--clinova-space-4);
+  border-bottom: 1px solid var(--clinova-border);
+  color: var(--clinova-text-secondary);
+  vertical-align: middle;
+}
+
+.clinova-table tr:last-child td {
+  border-bottom: none;
+}
+
+.clinova-table tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* Form Controls */
+.clinova-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--clinova-space-1);
+}
+
+.clinova-form-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--clinova-text-primary);
+}
+
+.clinova-input,
+.clinova-select,
+.clinova-textarea {
+  width: 100%;
+  border: 1px solid var(--clinova-border-subtle);
+  border-radius: var(--clinova-radius-md);
+  background-color: var(--clinova-surface);
+  color: var(--clinova-text-primary);
+  padding: var(--clinova-space-2) var(--clinova-space-3);
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease;
+  min-height: 40px;
+}
+
+.clinova-input:focus,
+.clinova-select:focus,
+.clinova-textarea:focus {
+  outline: none;
+  border-color: var(--clinova-focus-ring);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.clinova-textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+/* Drawers & Slide-overs */
+.clinova-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--clinova-backdrop);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.clinova-drawer-panel {
+  width: 100%;
+  max-width: 540px;
+  height: 100%;
+  background-color: var(--clinova-surface);
+  box-shadow: var(--clinova-shadow-drawer);
+  display: flex;
+  flex-direction: column;
+  z-index: 101;
+  overflow-y: auto;
+}
+
+/* Dialog / Modal */
+.clinova-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--clinova-backdrop);
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--clinova-space-4);
+}
+
+.clinova-modal-content {
+  width: 100%;
+  max-width: 520px;
+  background-color: var(--clinova-surface);
+  border-radius: var(--clinova-radius-xl);
+  box-shadow: var(--clinova-shadow-lg);
+  padding: var(--clinova-space-6);
+  z-index: 111;
+}
+
+/* Timeline */
+.clinova-timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: var(--clinova-space-6);
+}
+
+.clinova-timeline::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 8px;
+  width: 2px;
+  background-color: var(--clinova-border);
+}
+
+.clinova-timeline-item {
+  position: relative;
+  padding-bottom: var(--clinova-space-5);
+}
+
+.clinova-timeline-dot {
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--clinova-accent);
+  border: 2px solid var(--clinova-surface);
+}
+
+.clinova-timeline-dot-alert {
+  background-color: var(--clinova-danger);
+}
+
+/* ==========================================================================
+   Keyframes & Dynamic Loading States
+   ========================================================================== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   Responsive Navigation Visibility (Pure CSS, Zero CSS-in-JS)
+   ========================================================================== */
+.clinova-desktop-nav {
+  display: none;
+}
+
+.clinova-mobile-menu-btn {
+  display: inline-flex;
+}
+
+@media (min-width: 860px) {
+  .clinova-desktop-nav {
+    display: flex !important;
+  }
+  .clinova-mobile-menu-btn {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .clinova-desktop-item {
+    display: none !important;
+  }
+}

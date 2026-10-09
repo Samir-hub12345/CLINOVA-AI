@@ -17,6 +17,19 @@ from app.db.session import get_db
 from app.db.models import Case, Facility, Referral, AuditLog, VitalReading
 from app.domain.facilitygraph.engine import generate_sbar_packet, haversine_transit_estimate
 from app.domain.signalgraph.engine import signal_engine
+from app.core.auth import get_current_actor, ActorContext
+from app.core.rbac import (
+    Permission,
+    check_role_permission,
+    ROLE_CLINICIAN,
+    ROLE_DOCTOR,
+    ROLE_REFERRAL_COORDINATOR,
+    ROLE_SYSTEM_ADMIN,
+    ROLE_AUDITOR,
+    ROLE_PATIENT,
+)
+from app.core.policy import authorize_case_access, authorize_facility_access
+from app.core.errors import ClinovaAPIError
 
 router = APIRouter()
 
@@ -42,12 +55,18 @@ class UpdateReferralStatusRequest(BaseModel):
 
 
 @router.post("/sbar", tags=["Referrals"])
-async def prepare_sbar_packet(req: GenerateSBARRequest, db: AsyncSession = Depends(get_db)):
+async def prepare_sbar_packet(
+    req: GenerateSBARRequest,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
     """Generates standardized SBAR clinical transfer packet for inter-facility handoff."""
     case_stmt = select(Case).where(Case.id == req.case_id).options(selectinload(Case.patient))
     case = (await db.execute(case_stmt)).scalars().first()
     if not case:
-        raise HTTPException(status_code=404, detail="Case not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message="Case not found.", status_code=404)
+
+    await authorize_case_access(case, actor, required_permission=Permission.CASE_READ, db=db)
 
     origin_fac = await db.get(Facility, case.facility_id)
     dest_fac = await db.get(Facility, req.destination_facility_id)
@@ -94,11 +113,18 @@ async def prepare_sbar_packet(req: GenerateSBARRequest, db: AsyncSession = Depen
 
 
 @router.post("/create", tags=["Referrals"])
-async def create_referral(req: CreateReferralRequest, db: AsyncSession = Depends(get_db)):
+async def create_referral(
+    req: CreateReferralRequest,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
     """Persists inter-facility referral and marks encounter as TRANSFER_PENDING."""
+    check_role_permission(actor.role, Permission.REFERRAL_COORDINATE)
     case = await db.get(Case, req.case_id)
     if not case:
-        raise HTTPException(status_code=404, detail="Case not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message="Case not found.", status_code=404)
+
+    await authorize_case_access(case, actor, required_permission=Permission.REFERRAL_COORDINATE, db=db)
 
     existing_ref = (await db.execute(select(Referral).where(Referral.case_id == case.id))).scalars().first()
     if existing_ref:
@@ -131,14 +157,16 @@ async def create_referral(req: CreateReferralRequest, db: AsyncSession = Depends
     await db.flush()
 
     audit = AuditLog(
-        actor_id="CLINICIAN",
+        actor_id=actor.actor_id,
         action="REFERRAL_DISPATCHED",
         entity_type="REFERRAL",
         entity_id=referral.id,
         details={
             "case_id": case.id,
+            "origin_facility_id": req.origin_facility_id,
             "destination_facility_id": req.destination_facility_id,
             "bundle": req.required_bundle,
+            "actor_role": actor.role,
         },
     )
     db.add(audit)
@@ -158,16 +186,17 @@ async def update_referral_status(
     referral_id: str,
     req: UpdateReferralStatusRequest,
     db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
 ):
     """Updates referral status and drives case state machine."""
+    check_role_permission(actor.role, Permission.REFERRAL_COORDINATE)
     ref = await db.get(Referral, referral_id)
     if not ref:
-        raise HTTPException(status_code=404, detail="Referral not found.")
+        raise ClinovaAPIError(category="NOT_FOUND", message="Referral not found.", status_code=404)
 
-    ref.status = req.status
     case = await db.get(Case, ref.case_id)
-
     if case:
+        await authorize_case_access(case, actor, required_permission=Permission.REFERRAL_COORDINATE, db=db)
         if req.status == "COMPLETED":
             case.status = "COMPLETED"
         elif req.status == "DISPATCHED":
@@ -176,12 +205,13 @@ async def update_referral_status(
             case.status = "REFERRAL_FAILED"
         case.updated_at = datetime.now(timezone.utc)
 
+    ref.status = req.status
     audit = AuditLog(
-        actor_id="REFERRAL_COORDINATOR",
+        actor_id=actor.actor_id,
         action="REFERRAL_STATUS_UPDATED",
         entity_type="REFERRAL",
         entity_id=ref.id,
-        details={"status": req.status, "case_id": ref.case_id},
+        details={"status": req.status, "case_id": ref.case_id, "actor_role": actor.role},
     )
     db.add(audit)
     await db.commit()

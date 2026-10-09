@@ -286,6 +286,7 @@ def build_caregraph_view(
     vitals_history: List[Dict[str, Any]],
     evidence_records: List[Dict[str, Any]],
     decisions: List[Dict[str, Any]],
+    outcome_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Assembles the full serialized CareGraph topology with nodes, edges, trajectory, and uncertainty."""
     nodes = []
@@ -393,6 +394,29 @@ def build_caregraph_view(
             "status": VerificationStatus.CONFIRMED,
         })
         edges.append({"source": encounter_node_id, "target": dec_node_id, "relation": "AUTHORIZES"})
+
+    # 7. Outcome Node (Phase 23)
+    if outcome_data:
+        outcome_node_id = f"node-outcome-{encounter_node_id}"
+        outcome_label = f"Outcome: {outcome_data.get('outcome_status') or outcome_data.get('final_condition') or 'RECORDED'}"
+        nodes.append({
+            "id": outcome_node_id,
+            "type": "OUTCOME",
+            "label": outcome_label,
+            "data": {
+                "outcome_status": outcome_data.get("outcome_status", "UNKNOWN"),
+                "actual_action": outcome_data.get("actual_action", "UNKNOWN"),
+                "disposition": outcome_data.get("disposition"),
+                "recommendation": outcome_data.get("recommendation"),
+                "professional_decision": outcome_data.get("professional_decision"),
+                "recorded_at": str(outcome_data.get("recorded_at") or outcome_data.get("created_at") or ""),
+                "is_corrected": outcome_data.get("is_corrected", False),
+                "version": outcome_data.get("version", 1),
+            },
+            "provenance": ProvenanceType.CLINICIAN_VERIFIED,
+            "status": VerificationStatus.CONFIRMED,
+        })
+        edges.append({"source": encounter_node_id, "target": outcome_node_id, "relation": "CONCLUDES_WITH"})
 
     return {
         "nodes": nodes,

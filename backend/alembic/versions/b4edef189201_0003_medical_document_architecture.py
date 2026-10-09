@@ -22,49 +22,77 @@ def upgrade() -> None:
     def exec_sql(sql: str):
         op.execute(sa.text(sql.strip()))
 
-    # 0. Add enum values if needed
-    exec_sql("ALTER TYPE documentstatus ADD VALUE IF NOT EXISTS 'QUARANTINED';")
-    exec_sql("ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'DISCHARGE_SUMMARY';")
+    bind = op.get_bind()
+    dialect = bind.dialect.name
 
-    # 1. Add new columns to documents table
-    exec_sql("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='safe_filename') THEN
-                ALTER TABLE documents ADD COLUMN safe_filename VARCHAR(255);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='detected_mime_type') THEN
-                ALTER TABLE documents ADD COLUMN detected_mime_type VARCHAR(100);
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='scan_status') THEN
-                ALTER TABLE documents ADD COLUMN scan_status VARCHAR(50) NOT NULL DEFAULT 'clean';
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='scan_details') THEN
-                ALTER TABLE documents ADD COLUMN scan_details TEXT;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='quarantined_at') THEN
-                ALTER TABLE documents ADD COLUMN quarantined_at TIMESTAMPTZ;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='checksum_algorithm') THEN
-                ALTER TABLE documents ADD COLUMN checksum_algorithm VARCHAR(32) NOT NULL DEFAULT 'SHA-256';
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='version') THEN
-                ALTER TABLE documents ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='parent_document_id') THEN
-                ALTER TABLE documents ADD COLUMN parent_document_id VARCHAR(36) REFERENCES documents(id) ON DELETE SET NULL;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='is_current_version') THEN
-                ALTER TABLE documents ADD COLUMN is_current_version BOOLEAN NOT NULL DEFAULT TRUE;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='deleted_at') THEN
-                ALTER TABLE documents ADD COLUMN deleted_at TIMESTAMPTZ;
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='storage_bucket') THEN
-                ALTER TABLE documents ADD COLUMN storage_bucket VARCHAR(100) NOT NULL DEFAULT 'medical-documents';
-            END IF;
-        END $$;
-    """)
+    if dialect == "postgresql":
+        # 0. Add enum values if needed
+        exec_sql("ALTER TYPE documentstatus ADD VALUE IF NOT EXISTS 'QUARANTINED';")
+        exec_sql("ALTER TYPE documenttype ADD VALUE IF NOT EXISTS 'DISCHARGE_SUMMARY';")
+
+        # 1. Add new columns to documents table
+        exec_sql("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='safe_filename') THEN
+                    ALTER TABLE documents ADD COLUMN safe_filename VARCHAR(255);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='detected_mime_type') THEN
+                    ALTER TABLE documents ADD COLUMN detected_mime_type VARCHAR(100);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='scan_status') THEN
+                    ALTER TABLE documents ADD COLUMN scan_status VARCHAR(50) NOT NULL DEFAULT 'clean';
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='scan_details') THEN
+                    ALTER TABLE documents ADD COLUMN scan_details TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='quarantined_at') THEN
+                    ALTER TABLE documents ADD COLUMN quarantined_at TIMESTAMPTZ;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='checksum_algorithm') THEN
+                    ALTER TABLE documents ADD COLUMN checksum_algorithm VARCHAR(32) NOT NULL DEFAULT 'SHA-256';
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='version') THEN
+                    ALTER TABLE documents ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='parent_document_id') THEN
+                    ALTER TABLE documents ADD COLUMN parent_document_id VARCHAR(36) REFERENCES documents(id) ON DELETE SET NULL;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='is_current_version') THEN
+                    ALTER TABLE documents ADD COLUMN is_current_version BOOLEAN NOT NULL DEFAULT TRUE;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='deleted_at') THEN
+                    ALTER TABLE documents ADD COLUMN deleted_at TIMESTAMPTZ;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='documents' AND column_name='storage_bucket') THEN
+                    ALTER TABLE documents ADD COLUMN storage_bucket VARCHAR(100) NOT NULL DEFAULT 'medical-documents';
+                END IF;
+            END $$;
+        """)
+    else:
+        from sqlalchemy import inspect
+        inspector = inspect(bind)
+        if inspector.has_table("documents"):
+            cols = {c["name"] for c in inspector.get_columns("documents")}
+            cols_to_add = [
+                ("safe_filename", sa.Column("safe_filename", sa.String(255), nullable=True)),
+                ("detected_mime_type", sa.Column("detected_mime_type", sa.String(100), nullable=True)),
+                ("scan_status", sa.Column("scan_status", sa.String(50), nullable=False, server_default="clean")),
+                ("scan_details", sa.Column("scan_details", sa.Text(), nullable=True)),
+                ("quarantined_at", sa.Column("quarantined_at", sa.DateTime(timezone=True), nullable=True)),
+                ("checksum_algorithm", sa.Column("checksum_algorithm", sa.String(32), nullable=False, server_default="SHA-256")),
+                ("version", sa.Column("version", sa.Integer(), nullable=False, server_default="1")),
+                ("parent_document_id", sa.Column("parent_document_id", sa.String(36), sa.ForeignKey("documents.id", ondelete="SET NULL"), nullable=True)),
+                ("is_current_version", sa.Column("is_current_version", sa.Boolean(), nullable=False, server_default=sa.true())),
+                ("deleted_at", sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True)),
+                ("storage_bucket", sa.Column("storage_bucket", sa.String(100), nullable=False, server_default="medical-documents")),
+            ]
+            for col_name, col_def in cols_to_add:
+                if col_name not in cols:
+                    try:
+                        op.add_column("documents", col_def)
+                    except Exception:
+                        pass
 
     # 2. Backfill existing document rows in a single UPDATE command
     exec_sql("""
