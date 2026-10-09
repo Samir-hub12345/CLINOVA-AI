@@ -1,9 +1,9 @@
 # CLINOVA AI — Comprehensive Production Deployment Guide
 
 > **System:** CLINOVA AI Continuous Care Intelligence System  
-> **Milestone:** Phase 27 — Deployment Readiness & Automated Release Preparation  
+> **Milestone:** Phase 28 — Live Deployment, Hosting Integration & GitHub Auto-Deploy  
 > **Target Production Profile:** Zero-Mandatory-Paid-Cost Hackathon / Prototype Deployment  
-> **Authoritative Repository:** [Samir-hub12345/CLIVORA-AI](https://github.com/Samir-hub12345/CLIVORA-AI.git) (`master` branch)  
+> **Authoritative Repository:** [Samir-hub12345/CLIVORA-AI](https://github.com/Samir-hub12345/CLIVORA-AI.git) (`master` branch; identity confirmation pending human operator review)  
 > **Clinical Governance:** Strictly Non-Diagnostic | Advisory Only | Mandatory Human Verification  
 
 ---
@@ -95,7 +95,7 @@ To maintain the **zero-mandatory-paid-cost constraint**, the deployment architec
 
 | Variable | Type | Required | Example | Purpose & Boundary |
 |:---|:---|:---:|:---|:---|
-| `NEXT_PUBLIC_API_URL` | string | **Yes** | `https://clinova-backend.onrender.com/api/v1` | Public API base URL used by client-side fetchers and Next.js rewrites. |
+| `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_API_BASE_URL` | string | **Yes** | `https://clinova-backend.onrender.com/api/v1` | Public API base URL used by client-side fetchers and Next.js rewrites. Both variables are supported interchangeably. Suffix normalization is automatic: if supplied with or without `/api/v1`, the client automatically ensures `/api/v1` is targeted and Next.js proxy rewrites are aligned. |
 | `NEXT_PUBLIC_APP_URL` | string | **Yes** | `https://clinova-ai.vercel.app` | Canonical public application URL for metadata and OpenGraph resolution. |
 
 > [!CAUTION]
@@ -233,7 +233,7 @@ CLINOVA AI is configured for GitOps release propagation from GitHub:
 ```
                   ┌───────────────────────────────┐
                   │ Local Development & Testing   │
-                  │ npm test / pytest 397 passing │
+                  │ npm test / pytest 400 passing │
                   └───────────────┬───────────────┘
                                   │ git push origin master
                                   ▼
@@ -247,7 +247,7 @@ CLINOVA AI is configured for GitOps release propagation from GitHub:
          ┌────────────────────────┐  ┌────────────────────────────────────┐
          │ GitHub Actions CI      │  │ Cloud Provider Release Deployment  │
          │ - Flake8 / Lint        │  │                                    │
-         │ - 397 Pytest Matrix    │  ├─────────────────┬──────────────────┤
+         │ - 400 Pytest Matrix    │  ├─────────────────┬──────────────────┤
          │ - TS Typecheck         │  │ Vercel          │ Render           │
          │ - Offline Queue Unit   │  │ Rebuilds        │ Rebuilds         │
          │ - Next.js Prod Build   │  │ Frontend App    │ Backend ASGI     │
@@ -261,7 +261,7 @@ CLINOVA AI is configured for GitOps release propagation from GitHub:
 ### Automation Policy:
 1. **Pull Requests & Non-Master Branches**:
    - Vercel automatically deploys ephemeral **Preview Deployments** for pull requests.
-   - GitHub Actions runs typechecks, linter, offline queue unit tests, and the 397 backend test regression matrix.
+   - GitHub Actions runs typechecks, linter, offline queue unit tests, and the 400 backend test regression matrix.
 2. **Master Branch Pushes**:
    - Triggers automated production deployment on both Vercel and Render.
    - Render detects changes within `backend/` and triggers a blue-green zero-downtime container swap.
