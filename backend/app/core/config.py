@@ -55,7 +55,13 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_database_url(cls, v: str) -> str:
-        if not v:
+        if v is not None:
+            v = str(v).strip()
+            if v.startswith('"') and v.endswith('"'):
+                v = v[1:-1]
+            if v.startswith("'") and v.endswith("'"):
+                v = v[1:-1]
+        if not v or v == "your-database-url-here" or v.startswith("<"):
             dev_db = (BACKEND_ROOT / "clinova-dev.db").as_posix()
             return f"sqlite+aiosqlite:///{dev_db}"
         # Anchor relative SQLite paths to BACKEND_ROOT to prevent CWD divergence between root and backend
