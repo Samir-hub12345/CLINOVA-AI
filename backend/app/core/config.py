@@ -85,7 +85,7 @@ class Settings(BaseSettings):
 
     # Security & Authentication (Phase 14)
     SECRET_KEY: str = "clinova-native-dev-secret-key-32chars-minimum-2026!"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 hours for clinical shift continuity
     JWT_ALGORITHM: str = "HS256"
     DEMO_USER_PASSWORD: str = "ClinovaDemo2026!"
     ALLOW_LEGACY_ACTOR_HEADERS: bool = True  # Strict server-side DB resolution still applies

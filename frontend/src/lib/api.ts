@@ -127,11 +127,13 @@ export function setAuthToken(token: string | null, user?: Persona | null): void 
   }
 }
 
-export function clearAuthToken(): void {
+export function clearAuthToken(reason: "expired" | "logout" = "logout"): void {
   const hadToken = !!getAuthToken();
   setAuthToken(null, null);
   if (hadToken && typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("clinova_session_expired"));
+    window.dispatchEvent(
+      new CustomEvent("clinova_session_expired", { detail: { reason } })
+    );
   }
 }
 
@@ -141,7 +143,7 @@ async function safeFetch<T>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), options?.timeoutMs || 2500);
+  const timeoutId = setTimeout(() => controller.abort(), options?.timeoutMs || 8000);
 
   const token = getAuthToken();
   const headers: Record<string, string> = {
@@ -165,8 +167,9 @@ async function safeFetch<T>(
     if (!res.ok) {
       if (res.status === 401 && typeof window !== "undefined") {
         const hadToken = !!getAuthToken();
-        if (hadToken) {
-          clearAuthToken();
+        const isMockToken = hadToken && getAuthToken()?.startsWith("mock-token-");
+        if (hadToken && !isMockToken) {
+          clearAuthToken("expired");
         }
       }
       const err = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -314,10 +317,10 @@ export async function logout(): Promise<{ status: string; message: string }> {
     const res = await safeFetch<{ status: string; message: string }>("/auth/logout", {
       method: "POST",
     });
-    clearAuthToken();
+    clearAuthToken("logout");
     return res;
   } catch {
-    clearAuthToken();
+    clearAuthToken("logout");
     return { status: "revoked", message: "Successfully logged out." };
   }
 }
@@ -362,8 +365,11 @@ export async function getCurrentUser(): Promise<Persona | null> {
   } catch (error: unknown) {
     const err = error as { status?: number };
     if (err?.status === 401) {
-      clearAuthToken();
-      return null;
+      const isMockToken = getAuthToken()?.startsWith("mock-token-");
+      if (!isMockToken) {
+        clearAuthToken("expired");
+        return null;
+      }
     }
     // If backend unreachable over network, fallback to stored session user rather than forcing Clinician
     if (stored) {
@@ -1753,8 +1759,9 @@ export async function downloadCaseReportPdf(caseId: string): Promise<Blob> {
     if (!res.ok) {
       if (res.status === 401 && typeof window !== "undefined") {
         const hadToken = !!getAuthToken();
-        if (hadToken) {
-          clearAuthToken();
+        const isMockToken = hadToken && getAuthToken()?.startsWith("mock-token-");
+        if (hadToken && !isMockToken) {
+          clearAuthToken("expired");
         }
       }
       const err = new Error(`Failed to download report PDF (HTTP ${res.status})`);

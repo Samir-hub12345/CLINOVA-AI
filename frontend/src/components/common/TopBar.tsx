@@ -66,7 +66,13 @@ export const TopBar: React.FC<TopBarProps> = ({
     }
     validateSession();
 
-    const handleExpired = () => {
+    const handleExpired = (e: Event) => {
+      const custom = e as CustomEvent<{ reason?: string }>;
+      if (custom.detail?.reason === "logout") {
+        setSessionExpired(false);
+        setCurrentUser(null);
+        return;
+      }
       setSessionExpired(true);
       setCurrentUser(null);
     };
@@ -142,6 +148,14 @@ export const TopBar: React.FC<TopBarProps> = ({
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
+
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/about" ||
+    pathname === "/disclaimer" ||
+    pathname === "/privacy";
 
   return (
     <header
@@ -401,7 +415,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
 
         {/* Session Expired Alert Banner */}
-        {sessionExpired && (
+        {sessionExpired && !isPublicRoute && (
           <div
             style={{
               backgroundColor: "var(--clinova-warning-bg)",
@@ -418,13 +432,30 @@ export const TopBar: React.FC<TopBarProps> = ({
               <AlertTriangle style={{ width: 16, height: 16 }} aria-hidden="true" />
               <span>Authentication session has expired. Please sign in again.</span>
             </div>
-            <button
-              onClick={() => setLoginModalOpen(true)}
-              className="clinova-btn clinova-btn-outline"
-              style={{ fontSize: "0.75rem", padding: "2px 8px" }}
-            >
-              Sign In
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={() => setLoginModalOpen(true)}
+                className="clinova-btn clinova-btn-outline"
+                style={{ fontSize: "0.75rem", padding: "2px 8px" }}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => setSessionExpired(false)}
+                aria-label="Dismiss alert"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: 2,
+                }}
+              >
+                <X style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </button>
+            </div>
           </div>
         )}
 
