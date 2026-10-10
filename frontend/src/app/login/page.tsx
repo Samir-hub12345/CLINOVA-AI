@@ -160,24 +160,18 @@ export default function LoginPage() {
                   height: 32,
                   minWidth: 32,
                   minHeight: 32,
-                  borderRadius: "var(--r-md)",
-                  border: "1px solid var(--border)",
-                  backgroundColor: "var(--navy-800)",
+                  borderRadius: "var(--r-md, 8px)",
+                  backgroundColor: "var(--navy-800, #16324f)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  overflow: "hidden",
                   flexShrink: 0,
                 }}
+                aria-hidden="true"
               >
-                <Image
-                  src="/branding/clinova-ai-mark.png"
-                  alt="CLINOVA AI Logo"
-                  width={24}
-                  height={24}
-                  priority
-                  style={{ objectFit: "contain" }}
-                />
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2v12M2 8h12" stroke="#5fd3c7" strokeWidth="2.75" strokeLinecap="round" />
+                </svg>
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span
@@ -196,12 +190,12 @@ export default function LoginPage() {
                     fontSize: "0.625rem",
                     color: "var(--teal-700)",
                     fontWeight: 700,
-                    letterSpacing: "0.06em",
+                    letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     lineHeight: 1.2,
                   }}
                 >
-                  Continuous Care
+                  Continuous Care Intelligence
                 </span>
               </div>
             </Link>

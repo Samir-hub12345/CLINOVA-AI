@@ -181,24 +181,18 @@ export const TopBar: React.FC<TopBarProps> = ({
                 height: 32,
                 minWidth: 32,
                 minHeight: 32,
-                borderRadius: "var(--clinova-radius-md)",
-                border: "1px solid var(--clinova-border)",
-                backgroundColor: "var(--clinova-surface-subtle)",
+                borderRadius: "var(--r-md, 8px)",
+                backgroundColor: "var(--navy-800, #16324f)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                overflow: "hidden",
                 flexShrink: 0,
               }}
+              aria-hidden="true"
             >
-              <Image
-                src="/branding/clinova-ai-mark.png"
-                alt="CLINOVA AI Logo"
-                width={28}
-                height={28}
-                priority
-                style={{ objectFit: "contain", width: 28, height: 28 }}
-              />
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                <path d="M8 2v12M2 8h12" stroke="#5fd3c7" strokeWidth="2.75" strokeLinecap="round" />
+              </svg>
             </div>
             <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
               <span
@@ -284,7 +278,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               {onOpenReferralDrawer && (
                 <button
                   onClick={onOpenReferralDrawer}
-                  className="clinova-icon-btn"
+                  className="clinova-icon-btn hide-mobile"
                   title="Open Referral Coordination Drawer"
                   aria-label="Open Referral Coordination Drawer"
                 >
@@ -294,7 +288,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               {onOpenFacilityDrawer && (
                 <button
                   onClick={onOpenFacilityDrawer}
-                  className="clinova-icon-btn"
+                  className="clinova-icon-btn hide-mobile"
                   title="Open Facility Resources Drawer"
                   aria-label="Open Facility Resources Drawer"
                 >
@@ -304,7 +298,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               {onOpenSystemDrawer && (
                 <button
                   onClick={onOpenSystemDrawer}
-                  className="clinova-icon-btn"
+                  className="clinova-icon-btn hide-mobile"
                   title="Open System Audit Drawer"
                   aria-label="Open System Audit Drawer"
                 >
@@ -324,6 +318,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                     aria-label="Select Active Clinical Role"
                     value={currentUser.id}
                     onChange={(e) => handleRoleChange(e.target.value)}
+                    className="hide-mobile"
                     style={{
                       fontSize: "0.75rem",
                       fontWeight: 600,
@@ -368,7 +363,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                     onChange={(e) => {
                       if (e.target.value) handleRoleChange(e.target.value);
                     }}
-                    className="select"
+                    className="select hide-mobile"
                     style={{
                       height: 30,
                       fontSize: "0.75rem",
@@ -441,31 +436,157 @@ export const TopBar: React.FC<TopBarProps> = ({
               borderTop: "1px solid var(--clinova-border)",
               display: "flex",
               flexDirection: "column",
-              gap: 6,
+              gap: 8,
             }}
           >
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                style={{
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                  padding: "8px 12px",
-                  borderRadius: "var(--clinova-radius-md)",
-                  textDecoration: "none",
-                  color: isActive(link.href)
-                    ? "var(--clinova-accent-text)"
-                    : "var(--clinova-text-primary)",
-                  backgroundColor: isActive(link.href)
-                    ? "var(--clinova-accent-light)"
-                    : "transparent",
-                }}
-              >
-                {link.label}
-              </Link>
-            ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    padding: "8px 12px",
+                    borderRadius: "var(--clinova-radius-md)",
+                    textDecoration: "none",
+                    color: isActive(link.href)
+                      ? "var(--clinova-accent-text)"
+                      : "var(--clinova-text-primary)",
+                    backgroundColor: isActive(link.href)
+                      ? "var(--clinova-accent-light)"
+                      : "transparent",
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Mobile Clinical Drawer Actions */}
+            <div
+              style={{
+                borderTop: "1px solid var(--clinova-border)",
+                paddingTop: 10,
+                marginTop: 4,
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              <span className="section-title" style={{ padding: "0 12px", marginBottom: 2 }}>
+                Clinical Coordination
+              </span>
+              {onOpenReferralDrawer && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenReferralDrawer();
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", margin: "0 8px" }}
+                >
+                  <Share2 style={{ width: 15, height: 15, color: "var(--teal-600)" }} aria-hidden="true" />
+                  <span>Referral Coordination</span>
+                </button>
+              )}
+              {onOpenFacilityDrawer && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenFacilityDrawer();
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", margin: "0 8px" }}
+                >
+                  <Building2 style={{ width: 15, height: 15, color: "var(--info)" }} aria-hidden="true" />
+                  <span>Facility Resources</span>
+                </button>
+              )}
+              {onOpenSystemDrawer && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenSystemDrawer();
+                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ justifyContent: "flex-start", margin: "0 8px" }}
+                >
+                  <ShieldCheck style={{ width: 15, height: 15, color: "var(--success)" }} aria-hidden="true" />
+                  <span>System Audit Ledger</span>
+                </button>
+              )}
+            </div>
+
+            {/* Mobile Persona Switcher */}
+            <div
+              style={{
+                borderTop: "1px solid var(--clinova-border)",
+                paddingTop: 10,
+                marginTop: 4,
+                padding: "8px 12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              <span className="section-title">
+                {currentUser ? "Active Session" : "Demo Persona Quick Switch"}
+              </span>
+              {currentUser ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <RoleBadge role={currentUser.role} />
+                    <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>{currentUser.full_name}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="btn btn-danger btn-sm"
+                  >
+                    <LogOut style={{ width: 14, height: 14 }} aria-hidden="true" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <select
+                    aria-label="Mobile Demo Persona Quick Select"
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setMobileMenuOpen(false);
+                        handleRoleChange(e.target.value);
+                      }
+                    }}
+                    className="select"
+                    style={{ height: 36, fontSize: "0.8125rem" }}
+                  >
+                    <option value="" disabled>Select Demo Persona to Explore</option>
+                    {personas.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.full_name} ({p.role})
+                      </option>
+                    ))}
+                  </select>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="btn btn-primary btn-block"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <LogIn style={{ width: 15, height: 15 }} aria-hidden="true" />
+                    <span>Staff Sign In</span>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

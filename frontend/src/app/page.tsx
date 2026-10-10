@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -27,7 +29,84 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+interface AppointmentItem {
+  id: string;
+  time: string;
+  patient: string;
+  patientId: string;
+  type: string;
+  clinician: string;
+  status: "In progress" | "Completed" | "Scheduled";
+  mine: boolean;
+  avatar: string;
+}
+
+const APPOINTMENTS: AppointmentItem[] = [
+  {
+    id: "apt-1",
+    time: "09:00",
+    patient: "Manoj Das",
+    patientId: "CASE-SYNTH-003",
+    type: "Chest pain & acute triage consult",
+    clinician: "Dr. Priya Sharma",
+    status: "In progress",
+    mine: true,
+    avatar: "MD",
+  },
+  {
+    id: "apt-2",
+    time: "09:30",
+    patient: "Sunita Devi",
+    patientId: "CASE-SYNTH-004",
+    type: "Severe headache & hypertension review",
+    clinician: "Dr. Priya Sharma",
+    status: "Completed",
+    mine: true,
+    avatar: "SD",
+  },
+  {
+    id: "apt-3",
+    time: "10:15",
+    patient: "Rajesh Kumar",
+    patientId: "CASE-SYNTH-005",
+    type: "Respiratory distress & fever consult",
+    clinician: "Dr. Amit Roy",
+    status: "Scheduled",
+    mine: false,
+    avatar: "RK",
+  },
+  {
+    id: "apt-4",
+    time: "11:00",
+    patient: "Priya Sen",
+    patientId: "CASE-SYNTH-001",
+    type: "Abdominal colic & vitals acquisition",
+    clinician: "Dr. Priya Sharma",
+    status: "Scheduled",
+    mine: true,
+    avatar: "PS",
+  },
+  {
+    id: "apt-5",
+    time: "11:45",
+    patient: "Ananya Roy",
+    patientId: "CASE-SYNTH-006",
+    type: "Hypertension follow-up & medication review",
+    clinician: "Dr. Amit Roy",
+    status: "Scheduled",
+    mine: false,
+    avatar: "AR",
+  },
+];
+
 export default function HomePage() {
+  const [scheduleScope, setScheduleScope] = useState<"mine" | "all">("mine");
+
+  const filteredAppointments =
+    scheduleScope === "mine"
+      ? APPOINTMENTS.filter((apt) => apt.mine)
+      : APPOINTMENTS;
+
   const metricTiles = [
     {
       label: "Patients Scheduled Today",
@@ -178,6 +257,16 @@ export default function HomePage() {
     },
   ];
 
+  const renderStatusBadge = (status: "In progress" | "Completed" | "Scheduled") => {
+    if (status === "In progress") {
+      return <span className="badge badge-teal">In progress</span>;
+    }
+    if (status === "Completed") {
+      return <span className="badge badge-success">Completed</span>;
+    }
+    return <span className="badge badge-warning">Scheduled</span>;
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--clinova-space-8)", padding: "var(--clinova-space-4) 0" }}>
       {/* 1. HERO SECTION */}
@@ -293,7 +382,298 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. SIGNATURE 6-STAGE WORKFLOW ENGINE (FROM REFERENCE cS & auth-aside) */}
+      {/* 3. REAL-TIME CLINICAL OPERATIONS & AI GOVERNANCE DASHBOARD */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.55fr) minmax(0, 1fr)",
+          gap: "var(--clinova-space-6)",
+          alignItems: "start",
+        }}
+        className="clinova-dash-grid"
+      >
+        {/* LEFT COLUMN: Today's Schedule + Activity Timeline */}
+        <div className="stack gap-4">
+          {/* Today's Schedule Card */}
+          <div className="card" aria-labelledby="sched-heading">
+            <div className="card-header">
+              <div className="row gap-2">
+                <Calendar style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
+                <h2 id="sched-heading" style={{ margin: 0 }}>Today&apos;s Schedule</h2>
+              </div>
+              <div className="segmented" role="group" aria-label="Schedule scope">
+                <button
+                  type="button"
+                  aria-pressed={scheduleScope === "mine"}
+                  onClick={() => setScheduleScope("mine")}
+                >
+                  My patients ({APPOINTMENTS.filter((a) => a.mine).length})
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={scheduleScope === "all"}
+                  onClick={() => setScheduleScope("all")}
+                >
+                  Whole clinic ({APPOINTMENTS.length})
+                </button>
+              </div>
+            </div>
+            <div className="table-wrap">
+              <table className="table responsive">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Patient</th>
+                    <th>Consultation Type</th>
+                    {scheduleScope === "all" && <th>Clinician</th>}
+                    <th>Status</th>
+                    <th style={{ textAlign: "right" }}>
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAppointments.map((apt) => (
+                    <tr
+                      key={apt.id}
+                      className="clickable"
+                      onClick={() => {
+                        window.location.href = `/staff/cases/${apt.patientId}`;
+                      }}
+                    >
+                      <td data-label="Time" className="tnum medium">
+                        {apt.time}
+                      </td>
+                      <td className="primary-cell">
+                        <div className="row gap-2">
+                          <span className="avatar sm">{apt.avatar}</span>
+                          <span className="medium" style={{ color: "var(--navy-900)" }}>
+                            {apt.patient}
+                          </span>
+                          {apt.patientId === "CASE-SYNTH-003" && (
+                            <span className="badge badge-teal">Demo</span>
+                          )}
+                        </div>
+                      </td>
+                      <td data-label="Type" className="subtle">
+                        {apt.type}
+                      </td>
+                      {scheduleScope === "all" && (
+                        <td data-label="Clinician" className="subtle">
+                          {apt.clinician}
+                        </td>
+                      )}
+                      <td data-label="Status">
+                        {renderStatusBadge(apt.status)}
+                      </td>
+                      <td className="hide-sm" style={{ textAlign: "right" }}>
+                        <Link
+                          href={`/staff/cases/${apt.patientId}`}
+                          className="btn btn-ghost btn-sm"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Open record for ${apt.patient}`}
+                        >
+                          <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="card-footer">
+              <Link href="/staff/reception" className="btn btn-secondary btn-sm btn-block">
+                <span>Open Reception & Intake Desk</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Immutable Activity Audit Timeline */}
+          <div className="card" aria-labelledby="audit-heading">
+            <div className="card-header">
+              <div className="row gap-2">
+                <Clock style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
+                <h2 id="audit-heading" style={{ margin: 0 }}>Recent Patient Activity</h2>
+              </div>
+              <Link href="/system" className="small" style={{ color: "var(--teal-700)" }}>
+                View Audit Ledger
+              </Link>
+            </div>
+            <div className="card-body">
+              <ol className="list-reset timeline">
+                {recentActivity.map((act) => (
+                  <li key={act.id} className="timeline-item">
+                    <span className="timeline-dot">
+                      {act.isAi ? (
+                        <Sparkles style={{ width: 8, height: 8, color: "var(--teal-600)" }} aria-hidden="true" />
+                      ) : (
+                        <UserCheck style={{ width: 8, height: 8, color: "var(--success)" }} aria-hidden="true" />
+                      )}
+                    </span>
+                    <div className="stack" style={{ gap: 2 }}>
+                      <div className="small">
+                        <span className="medium" style={{ color: "var(--navy-900)" }}>
+                          {act.actor}
+                        </span>{" "}
+                        <span className="subtle">{act.action}</span>
+                      </div>
+                      <div className="xs muted">
+                        {act.source} • {act.time}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div className="card-footer">
+              <Link href="/system" className="btn btn-secondary btn-sm btn-block">
+                <span>Inspect Cryptographic SHA-256 Ledger</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Clinical Review Queue + AI Workflow Summary */}
+        <div className="stack gap-4">
+          {/* Clinical Task Queue Card */}
+          <div className="card" aria-labelledby="tasks-heading">
+            <div className="card-header">
+              <div className="row gap-2">
+                <FileCheck2 style={{ width: 18, height: 18, color: "var(--warning)" }} aria-hidden="true" />
+                <h2 id="tasks-heading" style={{ margin: 0 }}>Clinical Review Queue</h2>
+              </div>
+              <span className="badge badge-warning">4 Need Attention</span>
+            </div>
+            <div className="card-body" style={{ padding: 0 }}>
+              <ul className="list-reset">
+                {taskQueueItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <Link
+                        href={item.to}
+                        className="row between gap-3 interactive"
+                        style={{
+                          padding: "12px 18px",
+                          color: "inherit",
+                          textDecoration: "none",
+                          display: "flex",
+                        }}
+                      >
+                        <div className="row gap-3">
+                          <span className={`icon-tile ${item.badge}`} style={{ width: 32, height: 32 }}>
+                            <Icon style={{ width: 16, height: 16 }} aria-hidden="true" />
+                          </span>
+                          <div className="stack gap-1">
+                            <span className="small medium" style={{ color: "var(--navy-900)" }}>
+                              {item.title}
+                            </span>
+                            <span className="xs muted">{item.who}</span>
+                          </div>
+                        </div>
+                        <ArrowRight style={{ width: 15, height: 15, color: "var(--text-4)" }} aria-hidden="true" />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <div className="card-footer">
+              <Link href="/staff/review" className="btn btn-secondary btn-sm btn-block">
+                <span>View Full Attending Review Worklist</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+
+          {/* AI Workflow Summary Card */}
+          <div className="card" aria-labelledby="ai-summary-heading">
+            <div className="card-header">
+              <div className="row gap-2">
+                <span className="ai-mark">
+                  <Sparkles aria-hidden="true" />
+                </span>
+                <h2 id="ai-summary-heading" style={{ margin: 0 }}>AI Workflow Summary</h2>
+              </div>
+              <span className="badge badge-teal">Today</span>
+            </div>
+            <div className="card-body stack gap-4">
+              <div className="grid grid-3" style={{ gap: 10 }}>
+                <div
+                  className="stack gap-1"
+                  style={{
+                    padding: 12,
+                    borderRadius: "var(--r-md)",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <span className="stat-value" style={{ fontSize: "1.375rem" }}>16</span>
+                  <span className="xs muted" style={{ lineHeight: 1.3 }}>Drafts prepared</span>
+                </div>
+                <div
+                  className="stack gap-1"
+                  style={{
+                    padding: 12,
+                    borderRadius: "var(--r-md)",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <span className="stat-value" style={{ fontSize: "1.375rem" }}>14</span>
+                  <span className="xs muted" style={{ lineHeight: 1.3 }}>Reviewed by staff</span>
+                </div>
+                <div
+                  className="stack gap-1"
+                  style={{
+                    padding: 12,
+                    borderRadius: "var(--r-md)",
+                    background: "var(--warning-bg)",
+                    border: "1px solid #f6d6a8",
+                  }}
+                >
+                  <span className="stat-value" style={{ fontSize: "1.375rem", color: "var(--warning-text)" }}>2</span>
+                  <span className="xs muted" style={{ lineHeight: 1.3, color: "var(--warning-text)" }}>Awaiting review</span>
+                </div>
+              </div>
+
+              <div className="stack gap-2">
+                {[
+                  { label: "Clinical documentation drafts", count: 4 },
+                  { label: "NEWS2 & laboratory summaries", count: 3 },
+                  { label: "Patient follow-up instructions", count: 2 },
+                  { label: "Epistemic uncertainty checks", count: 1 },
+                ].map((cat) => (
+                  <div key={cat.label} className="row between small">
+                    <span className="subtle">{cat.label}</span>
+                    <span className="tnum medium" style={{ color: "var(--navy-900)" }}>{cat.count}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="alert alert-ai" style={{ padding: "8px 12px" }}>
+                <ShieldCheck style={{ width: 16, height: 16, flexShrink: 0 }} aria-hidden="true" />
+                <span style={{ fontSize: "var(--fs-xs)", lineHeight: 1.4 }}>
+                  Nothing drafted by AI is added to a chart, signed, or transmitted without definitive clinician approval.
+                </span>
+              </div>
+
+              <Link
+                href="/staff/review"
+                className="btn btn-secondary btn-sm"
+                style={{ alignSelf: "flex-start" }}
+              >
+                <span>Open Review Center</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. SIGNATURE 6-STAGE WORKFLOW ENGINE (FROM REFERENCE cS & auth-aside) */}
       <section className="card" style={{ padding: "var(--s-6)" }}>
         <div style={{ marginBottom: 20 }}>
           <div className="row between wrap gap-2">
@@ -329,105 +709,6 @@ export default function HomePage() {
               </div>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* 4. CLINICAL TASK QUEUE & ACTIVITY AUDIT FEED (FROM REFERENCE DASHBOARD) */}
-      <section className="grid grid-2 gap-6" style={{ alignItems: "start" }}>
-        {/* Left: Real Clinical Task Queue */}
-        <div className="card" aria-labelledby="tasks-heading">
-          <div className="card-header">
-            <div className="row gap-2">
-              <FileCheck2 style={{ width: 18, height: 18, color: "var(--warning)" }} aria-hidden="true" />
-              <h2 id="tasks-heading" style={{ margin: 0 }}>Clinical Review Queue</h2>
-            </div>
-            <span className="badge badge-warning">4 Need Attention</span>
-          </div>
-          <div className="card-body" style={{ padding: 0 }}>
-            <ul className="list-reset">
-              {taskQueueItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                    <Link
-                      href={item.to}
-                      className="row between gap-3 interactive"
-                      style={{
-                        padding: "12px 18px",
-                        color: "inherit",
-                        textDecoration: "none",
-                        display: "flex",
-                      }}
-                    >
-                      <div className="row gap-3">
-                        <span className={`icon-tile ${item.badge}`} style={{ width: 32, height: 32 }}>
-                          <Icon style={{ width: 16, height: 16 }} aria-hidden="true" />
-                        </span>
-                        <div className="stack gap-1">
-                          <span className="small medium" style={{ color: "var(--navy-900)" }}>
-                            {item.title}
-                          </span>
-                          <span className="xs muted">{item.who}</span>
-                        </div>
-                      </div>
-                      <ArrowRight style={{ width: 15, height: 15, color: "var(--text-4)" }} aria-hidden="true" />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-          <div className="card-footer">
-            <Link href="/staff/review" className="btn btn-secondary btn-sm btn-block">
-              <span>View Full Attending Review Worklist</span>
-              <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Right: Immutable Activity Audit Timeline */}
-        <div className="card" aria-labelledby="audit-heading">
-          <div className="card-header">
-            <div className="row gap-2">
-              <Clock style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
-              <h2 id="audit-heading" style={{ margin: 0 }}>Recent Patient Activity</h2>
-            </div>
-            <Link href="/system" className="small" style={{ color: "var(--teal-700)" }}>
-              View Audit Ledger
-            </Link>
-          </div>
-          <div className="card-body">
-            <ol className="list-reset timeline">
-              {recentActivity.map((act) => (
-                <li key={act.id} className="timeline-item">
-                  <span className="timeline-dot">
-                    {act.isAi ? (
-                      <Sparkles style={{ width: 8, height: 8, color: "var(--teal-600)" }} aria-hidden="true" />
-                    ) : (
-                      <UserCheck style={{ width: 8, height: 8, color: "var(--success)" }} aria-hidden="true" />
-                    )}
-                  </span>
-                  <div className="stack" style={{ gap: 2 }}>
-                    <div className="small">
-                      <span className="medium" style={{ color: "var(--navy-900)" }}>
-                        {act.actor}
-                      </span>{" "}
-                      <span className="subtle">{act.action}</span>
-                    </div>
-                    <div className="xs muted">
-                      {act.source} • {act.time}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div className="card-footer">
-            <Link href="/system" className="btn btn-secondary btn-sm btn-block">
-              <span>Inspect Cryptographic SHA-256 Ledger</span>
-              <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-            </Link>
-          </div>
         </div>
       </section>
 
