@@ -506,8 +506,130 @@ export const MOCK_DETAILED_CASES: Record<string, CareGraphData> = {
 };
 
 export function getMockCase(caseId: string): CareGraphData {
-  return (
-    MOCK_DETAILED_CASES[caseId] ||
-    MOCK_DETAILED_CASES["CASE-SYNTH-003"]
+  if (MOCK_DETAILED_CASES[caseId]) {
+    return MOCK_DETAILED_CASES[caseId];
+  }
+  // Try matching by patient_synthetic_id, case_number, or id in detailed cases
+  const matched = Object.values(MOCK_DETAILED_CASES).find(
+    (c) =>
+      c.case.patient_synthetic_id === caseId ||
+      c.case.case_number === caseId ||
+      c.case.id === caseId
   );
+  if (matched) return matched;
+
+  // Try matching by queue item
+  const queueItem = MOCK_SYNTHETIC_QUEUE.find(
+    (q) =>
+      q.case_id === caseId ||
+      q.patient_synthetic_id === caseId ||
+      q.case_number === caseId
+  );
+  if (queueItem) {
+    const trendValue =
+      queueItem.acuity_tier === "CRITICAL"
+        ? "CRITICAL"
+        : queueItem.trajectory_slope > 0.2
+        ? "DETERIORATING"
+        : queueItem.trajectory_slope < -0.05
+        ? "IMPROVING"
+        : "STABLE";
+
+    return {
+      case: {
+        id: queueItem.case_id,
+        case_number: queueItem.case_number,
+        patient_synthetic_id: queueItem.patient_synthetic_id,
+        age_bracket: queueItem.age_bracket,
+        biological_sex: queueItem.biological_sex,
+        status: queueItem.status,
+        acuity_tier: queueItem.acuity_tier,
+        risk_score: queueItem.risk_score,
+        uncertainty_score: queueItem.uncertainty_score,
+        trajectory_slope: queueItem.trajectory_slope,
+        presenting_complaint: queueItem.presenting_complaint,
+        primary_syndrome: queueItem.primary_syndrome,
+        required_bundle: queueItem.required_bundle,
+        emergency_active: queueItem.emergency_active,
+      },
+      trajectory: {
+        slope: queueItem.trajectory_slope,
+        trend: trendValue,
+        readings_count: 2,
+      },
+      uncertainty: {
+        uncertainty_score: queueItem.uncertainty_score,
+        protocol_completeness: 0.85,
+        evidence_quality: 0.88,
+        clinician_verification_ratio: 0.5,
+        missing_parameters: [],
+        follow_up_questions: [],
+        conflicts: [],
+        uncertainty_items: [],
+      },
+      graph: {
+        total_nodes: 2,
+        total_edges: 1,
+        nodes: [
+          {
+            id: "n1",
+            type: "SYMPTOM",
+            label: queueItem.presenting_complaint,
+            data: { complaint: queueItem.presenting_complaint },
+            provenance: queueItem.provenance_type,
+            status: "CONFIRMED",
+          },
+          {
+            id: "n2",
+            type: "SYNDROME",
+            label: queueItem.primary_syndrome || "Clinical Evaluation Pending",
+            data: { syndrome: queueItem.primary_syndrome || "Pending" },
+            provenance: "CLINICIAN_VERIFIED",
+            status: "CONFIRMED",
+          },
+        ],
+        edges: [{ source: "n1", target: "n2", relation: "INDICATES" }],
+      },
+      evidence_records: [],
+      vitals_history: queueItem.latest_vitals
+        ? [
+            {
+              id: "v-q-1",
+              heart_rate: queueItem.latest_vitals.hr,
+              systolic_bp: parseInt(queueItem.latest_vitals.bp?.split("/")[0] || "120"),
+              diastolic_bp: parseInt(queueItem.latest_vitals.bp?.split("/")[1] || "80"),
+              spo2_percent: queueItem.latest_vitals.spo2,
+              respiratory_rate: 18,
+              temperature_celsius: queueItem.latest_vitals.temp || 37.0,
+              avpu_score: "A",
+              recorded_at: "Just now",
+              provenance: "STAFF_ENTERED",
+              epistemic_status: "VERIFIED",
+            },
+          ]
+        : [],
+      red_flags: [],
+      timeline: [
+        {
+          id: "tl-q-1",
+          timestamp: "Today",
+          title: "Registration & Triage",
+          description: queueItem.presenting_complaint,
+          provenance: queueItem.provenance_type,
+          epistemic_status: "KNOWN",
+        },
+      ],
+    };
+  }
+
+  // Fallback to CASE-SYNTH-003 with preserved requested identifier
+  const fallback = MOCK_DETAILED_CASES["CASE-SYNTH-003"];
+  return {
+    ...fallback,
+    case: {
+      ...fallback.case,
+      id: caseId.startsWith("CASE-") ? caseId : fallback.case.id,
+      patient_synthetic_id: caseId.startsWith("PT-") || caseId.startsWith("REC-") ? caseId : fallback.case.patient_synthetic_id,
+    },
+  };
 }

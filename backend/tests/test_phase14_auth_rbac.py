@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.rbac import (
     ROLE_CLINICIAN,
     ROLE_NURSE,
+    ROLE_RECEPTIONIST,
     ROLE_PATIENT,
     ROLE_REFERRAL_COORDINATOR,
     ROLE_FACILITY_ADMIN,
@@ -986,3 +987,65 @@ async def test_section_24_end_to_end_smoke_flow():
         subsequent_res = await client.get(f"/api/v1/cases/{case_id}", headers=doc_headers)
         assert subsequent_res.status_code == 401
         assert subsequent_res.json()["error"]["code"] == "AUTHORIZATION_ERROR"
+
+
+@pytest.mark.asyncio
+async def test_receptionist_role_workflow_and_governance():
+    """Verify Receptionist role authentication, registration capability, and clinical boundary enforcement."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Authenticate as Receptionist (Tunde Olawale)
+        rec_token = await login_helper(client, "receptionist")
+        assert rec_token is not None
+        rec_headers = {"Authorization": f"Bearer {rec_token}"}
+
+        # 2. Verify identity profile endpoint
+        me_res = await client.get("/api/v1/auth/me", headers=rec_headers)
+        assert me_res.status_code == 200
+        user_data = me_res.json()
+        assert user_data["username"] == "receptionist"
+        assert user_data["role"] == ROLE_RECEPTIONIST
+        assert user_data["facility_id"] == "FAC-DH-04"
+
+        # 3. Create/register a new case intake at reception desk
+        intake_res = await client.post(
+            "/api/v1/intake/submit",
+            json={
+                "facility_id": "FAC-DH-04",
+                "pathway": "OPD_GENERAL",
+                "chief_complaint": "Persistent headache and fever for 2 days",
+                "consent_confirmed": True,
+                "reported_age_bracket": "25-35 YRS",
+                "biological_sex": "FEMALE",
+            },
+            headers=rec_headers,
+        )
+        assert intake_res.status_code == 200
+        case_id = intake_res.json()["case_id"]
+
+        # 4. Read case within same facility scope
+        case_res = await client.get(f"/api/v1/cases/{case_id}", headers=rec_headers)
+        assert case_res.status_code == 200
+
+        # 5. Strictly barred from performing clinical review action
+        review_res = await client.post(
+            f"/api/v1/cases/{case_id}/review-actions",
+            json={"action": "VERIFY_EVIDENCE", "evidence_id": "ev-01"},
+            headers=rec_headers,
+        )
+        assert review_res.status_code == 403
+        assert review_res.json()["error"]["code"] == "AUTHORIZATION_ERROR"
+
+        # 6. Strictly barred from clinical decision recording
+        decision_res = await client.post(
+            f"/api/v1/cases/{case_id}/decision",
+            json={
+                "decision_type": "CONFIRM_DIAGNOSIS",
+                "clinical_impression": "Receptionist attempting clinical diagnosis",
+                "clinical_rationale": "Non-clinical actor rationale",
+            },
+            headers=rec_headers,
+        )
+        assert decision_res.status_code == 403
+        assert decision_res.json()["error"]["code"] == "AUTHORIZATION_ERROR"
+

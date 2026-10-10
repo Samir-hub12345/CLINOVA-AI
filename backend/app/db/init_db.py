@@ -207,6 +207,15 @@ SEED_USERS = [
         "is_active": True,
     },
     {
+        "id": "usr-rec-08",
+        "username": "receptionist",
+        "email": "tunde.olawale@clinova.internal",
+        "full_name": "Tunde Olawale",
+        "role": "RECEPTIONIST",
+        "facility_id": "FAC-DH-04",
+        "is_active": True,
+    },
+    {
         "id": "usr-patient-07",
         "username": "patient",
         "email": "patient.demo@clinova.internal",

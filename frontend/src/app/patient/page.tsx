@@ -1,9 +1,27 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Activity, ShieldCheck, ArrowRight, Clock, FileCheck2 } from "lucide-react";
+import { Activity, ShieldCheck, ArrowRight, Clock, FileCheck2, Search, KeyRound } from "lucide-react";
 
 export default function PatientLandingPage() {
+  const router = useRouter();
+  const [tokenInput, setTokenInput] = useState("");
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const handleLookup = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = tokenInput.trim();
+    if (!clean) {
+      setSearchError("Please enter your assigned patient token or case reference number.");
+      return;
+    }
+    setSearchError(null);
+    router.push(`/patient/case/${encodeURIComponent(clean)}`);
+  };
+
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--clinova-space-6)" }}>
       <PageHeader
@@ -12,6 +30,7 @@ export default function PatientLandingPage() {
         breadcrumbs={[{ label: "Home", href: "/" }, { label: "Patient Portal" }]}
       />
 
+      {/* Primary Intake Registration CTA */}
       <div
         className="card"
         style={{
@@ -34,6 +53,43 @@ export default function PatientLandingPage() {
             <ArrowRight style={{ width: 16, height: 16 }} aria-hidden="true" />
           </Link>
         </div>
+      </div>
+
+      {/* Case Status Token Lookup Form */}
+      <div className="card" style={{ padding: "var(--s-6)", borderTop: "4px solid var(--navy-800)" }}>
+        <div className="stack gap-1" style={{ marginBottom: 14 }}>
+          <div className="row gap-2">
+            <KeyRound style={{ width: 20, height: 20, color: "var(--navy-800)" }} aria-hidden="true" />
+            <h3 style={{ fontSize: "1.125rem", margin: 0 }}>Check My Case Status & Care Plan</h3>
+          </div>
+          <p className="small subtle" style={{ margin: 0 }}>
+            Enter your patient reference token (e.g. <code>PT-SYN-0014</code> or <code>CASE-SYNTH-001</code>) issued at registration or SMS confirmation.
+          </p>
+        </div>
+
+        {searchError && (
+          <div className="alert alert-error" style={{ marginBottom: 12 }}>
+            <span className="xs">{searchError}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleLookup} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <input
+            type="text"
+            value={tokenInput}
+            onChange={(e) => {
+              setTokenInput(e.target.value);
+              if (searchError) setSearchError(null);
+            }}
+            placeholder="Enter token (e.g. PT-SYN-0014, CASE-SYNTH-003)"
+            className="input"
+            style={{ flex: 1, minWidth: 260 }}
+          />
+          <button type="submit" className="btn btn-primary">
+            <Search style={{ width: 15, height: 15 }} aria-hidden="true" />
+            <span>View Care Status</span>
+          </button>
+        </form>
       </div>
 
       <div className="clinova-grid-3col">
@@ -76,13 +132,13 @@ export default function PatientLandingPage() {
             Track Existing Demonstration Patient Tokens
           </h4>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            <Link href="/patient/case/CASE-SYNTH-001" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
+            <Link href="/patient/case/PT-SYN-0014" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
               Track PT-SYN-0014 (Routine URI)
             </Link>
-            <Link href="/patient/case/CASE-SYNTH-003" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
+            <Link href="/patient/case/PT-SYN-0842" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
               Track PT-SYN-0842 (Critical Chest Pain)
             </Link>
-            <Link href="/patient/case/CASE-SYNTH-004" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
+            <Link href="/patient/case/PT-SYN-0319" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
               Track PT-SYN-0319 (Urgent Febrile)
             </Link>
           </div>

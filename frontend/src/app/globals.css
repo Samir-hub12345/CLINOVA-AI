@@ -875,11 +875,29 @@ p {
 .row { display: flex; align-items: center; }
 .wrap { flex-wrap: wrap; }
 .between { justify-content: space-between; }
+.grid { display: grid; }
+.grid-1 { display: grid; grid-template-columns: 1fr; }
+.grid-2 { display: grid; grid-template-columns: 1fr; }
+.grid-3 { display: grid; grid-template-columns: 1fr; }
+.grid-4 { display: grid; grid-template-columns: 1fr; }
+
+@media (min-width: 640px) {
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
 .gap-1 { gap: var(--s-1); }
 .gap-2 { gap: var(--s-2); }
 .gap-3 { gap: var(--s-3); }
 .gap-4 { gap: var(--s-4); }
 .gap-5 { gap: var(--s-5); }
+.gap-6 { gap: var(--s-6); }
 .grow { flex: 1; min-width: 0; }
 .muted { color: var(--text-3); }
 .subtle { color: var(--text-2); }
@@ -1092,11 +1110,15 @@ p {
 /* Phone Frame & SMS Bubble Preview (Patient Instructions) */
 .phone-frame {
   max-width: 340px;
+  width: 100%;
+  box-sizing: border-box;
   border-radius: 24px;
   border: 1px solid var(--border-strong);
   background: #f0f2f5;
   padding: 16px 12px;
   box-shadow: var(--shadow-sm);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .sms-bubble {
   background: #ffffff;
@@ -1107,6 +1129,8 @@ p {
   white-space: pre-wrap;
   line-height: 1.5;
   color: var(--text);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .message-preview {
   border: 1px solid var(--border);
