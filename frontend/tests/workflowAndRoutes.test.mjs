@@ -69,6 +69,7 @@ const {
   downloadCaseReportPdf,
   getCaseReportPdfUrl,
   getCaseReportSummary,
+  generateClientReportPdfBlob,
   FALLBACK_PERSONAS,
 } = await import("../src/lib/api.ts");
 
@@ -257,4 +258,126 @@ console.log("--- Starting CLINOVA Master Workflow, Route & Interaction Test Suit
   console.log("✓ Test 9: Security Boundary - Session Logout reliably wipes credentials & role state");
 }
 
-console.log("--- All Master Workflow, Route & Interaction Tests Passed (9/9) ---");
+// Test 10: Attack Verification - Expired JWT Token on PDF download clears token and dispatches session expired event
+{
+  dispatchedEvents.length = 0;
+  setAuthToken("clinova-expired-token-999");
+  assert.strictEqual(getAuthToken(), "clinova-expired-token-999");
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: false,
+    status: 401,
+    statusText: "Unauthorized",
+  });
+
+  try {
+    let thrownError = null;
+    try {
+      await downloadCaseReportPdf("CASE-SYNTH-003");
+    } catch (err) {
+      thrownError = err;
+    }
+
+    assert.ok(thrownError, "Expired token request must throw");
+    assert.strictEqual(thrownError.status, 401, "Error must preserve HTTP 401 status");
+    assert.strictEqual(getAuthToken(), null, "Expired token must be cleared from storage");
+    assert.ok(
+      dispatchedEvents.some((e) => e.name === "clinova_session_expired"),
+      "clinova_session_expired event must be dispatched to notify UI"
+    );
+    console.log("✓ Test 10: Attack Verification - Expired JWT Token on PDF download triggers session eviction & alert banner");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+// Test 11: Security Boundary - Unauthorized Access (HTTP 403) Throws Cleanly Without Data Leak
+{
+  setAuthToken("clinova-patient-other-token");
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: false,
+    status: 403,
+    statusText: "Forbidden",
+  });
+
+  try {
+    let thrownError = null;
+    try {
+      await downloadCaseReportPdf("CASE-SYNTH-OTHER-PATIENT");
+    } catch (err) {
+      thrownError = err;
+    }
+
+    assert.ok(thrownError, "Forbidden download request must throw");
+    assert.strictEqual(thrownError.status, 403, "Error must preserve HTTP 403 status");
+    console.log("✓ Test 11: Security Boundary - Unauthorized cross-patient PDF download correctly blocked (HTTP 403)");
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearAuthToken();
+  }
+}
+
+// Test 12: Offline Fallback - Network Disconnected Synthesizes Valid PDF-1.4 Binary Blob
+{
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new TypeError("fetch failed - network offline");
+  };
+
+  try {
+    const offlineBlob = await downloadCaseReportPdf("CASE-SYNTH-003");
+    assert.ok(offlineBlob, "Offline PDF generation must return a Blob");
+    assert.strictEqual(offlineBlob.type, "application/pdf", "Blob type must be application/pdf");
+
+    // Read blob bytes to verify PDF-1.4 binary structure
+    const arrayBuffer = await offlineBlob.arrayBuffer();
+    const pdfText = new TextDecoder().decode(arrayBuffer);
+
+    assert.ok(pdfText.startsWith("%PDF-1.4"), "Generated PDF must start with %PDF-1.4 header");
+    assert.ok(pdfText.includes("%%EOF"), "Generated PDF must terminate with %%EOF trailer");
+    assert.ok(pdfText.includes("CLINOVA AI - CLINICAL CASE REPORT"), "Must include clinical header title");
+    assert.ok(pdfText.includes("CASE-SYNTH-003"), "Must embed target case identifier");
+    assert.ok(pdfText.includes("Cuttack District Headquarters Hospital"), "Must embed facility context");
+
+    console.log("✓ Test 12: Offline Fallback - Network disconnect gracefully synthesizes valid PDF-1.4 binary blob");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+// Test 13: Robustness - Dual Storage Cache Fallback (localStorage backup for restricted iframe/sessionStorage)
+{
+  clearAuthToken();
+  // Simulate sessionStorage being empty while localStorage has valid session backup
+  globalThis.sessionStorage.clear();
+  globalThis.localStorage.setItem("clinova_auth_token", "jwt-from-local-storage-backup");
+  globalThis.localStorage.setItem(
+    "clinova_user",
+    JSON.stringify({
+      id: "usr-doc-backup",
+      username: "doctor_backup",
+      full_name: "Dr. Backup Provider",
+      role: "CLINICIAN",
+      facility_id: "FAC-DH-04",
+      facility_name: "Cuttack DHH",
+    })
+  );
+
+  const recoveredToken = getAuthToken();
+  const recoveredUser = getStoredUser();
+
+  assert.strictEqual(recoveredToken, "jwt-from-local-storage-backup", "Must recover token from localStorage backup");
+  assert.strictEqual(recoveredUser?.role, "CLINICIAN", "Must recover user role from localStorage backup");
+  assert.strictEqual(recoveredUser?.full_name, "Dr. Backup Provider", "Must recover user profile from localStorage backup");
+
+  clearAuthToken();
+  assert.strictEqual(getAuthToken(), null, "clearAuthToken must also purge localStorage backup");
+  assert.strictEqual(getStoredUser(), null, "clearAuthToken must also purge user from localStorage backup");
+
+  console.log("✓ Test 13: Robustness - Dual storage cache fallback successfully verified");
+}
+
+console.log("--- All Master Workflow, Route & Interaction Tests Passed (13/13) ---");
+

@@ -41,13 +41,21 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
 
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 3000);
-    } catch {
-      // Fallback: try opening the direct PDF link or trigger print
-      try {
-        const directUrl = getCaseReportPdfUrl(caseId);
-        window.open(directUrl, "_blank");
-      } catch {
-        setError("Report download unavailable. Please try again.");
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401) {
+        setError("Session expired. Please sign in again.");
+      } else if (status === 403) {
+        setError("Access denied: You are not authorized to download this report.");
+      } else if (status === 404) {
+        setError("Report not found for this case.");
+      } else {
+        try {
+          const directUrl = getCaseReportPdfUrl(caseId);
+          window.open(directUrl, "_blank");
+        } catch {
+          setError("Report download unavailable. Please try again.");
+        }
       }
     } finally {
       setLoading(false);

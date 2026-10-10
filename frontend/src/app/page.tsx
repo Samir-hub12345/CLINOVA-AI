@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   ArrowRight,
@@ -100,6 +101,7 @@ const APPOINTMENTS: AppointmentItem[] = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [scheduleScope, setScheduleScope] = useState<"mine" | "all">("mine");
 
   const filteredAppointments =
@@ -438,7 +440,7 @@ export default function HomePage() {
                       key={apt.id}
                       className="clickable"
                       onClick={() => {
-                        window.location.href = `/staff/cases/${apt.patientId}`;
+                        router.push(`/staff/cases/${apt.patientId}`);
                       }}
                     >
                       <td data-label="Time" className="tnum medium">
