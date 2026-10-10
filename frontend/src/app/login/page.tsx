@@ -14,6 +14,8 @@ import {
   Lock,
   ArrowRight,
   Activity,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { login } from "@/lib/api";
 import { Persona } from "@/types";
@@ -79,6 +81,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("clinician");
   const [password, setPassword] = useState("ClinovaDemo2026!");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -160,16 +163,57 @@ export default function LoginPage() {
             </div>
 
             <div className="field">
-              <label className="label">
-                Password <span className="req">*</span>
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="input"
-              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <label className="label">
+                  Password <span className="req">*</span>
+                </label>
+                <span className="xs muted" style={{ fontSize: "11px" }}>
+                  Demo: <code>ClinovaDemo2026!</code>
+                </span>
+              </div>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="input"
+                  style={{ paddingRight: 38 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--text-muted, #94a3b8)",
+                    padding: 4,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {showPassword ? (
+                    <EyeOff style={{ width: 16, height: 16 }} aria-hidden="true" />
+                  ) : (
+                    <Eye style={{ width: 16, height: 16 }} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "var(--fs-xs)" }}>
+              <span className="xs muted">
+                Forgot password? Contact facility sysadmin.
+              </span>
+              <Link href="/register" className="xs link" style={{ color: "var(--teal-600)", fontWeight: 600 }}>
+                Register Staff Account
+              </Link>
             </div>
 
             <button

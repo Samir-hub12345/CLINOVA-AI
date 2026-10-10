@@ -14,6 +14,7 @@ import {
   PhoneCall,
   CheckCircle,
 } from "lucide-react";
+import { DownloadReportButton } from "@/components/common/DownloadReportButton";
 
 interface PageProps {
   params: Promise<{ caseId: string }>;
@@ -82,15 +83,18 @@ export default async function PatientCasePage({ params }: PageProps) {
 
       {/* Approved Patient Instructions & Care Plan (Reference Feature) */}
       <div className="card">
-        <div className="card-header">
+        <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div className="row gap-2">
             <FileCheck2 style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
             <h3 style={{ fontSize: "var(--fs-md)" }}>Approved Care Plan & Instructions</h3>
           </div>
-          <span className="badge badge-success">
-            <CheckCircle style={{ width: 11, height: 11 }} aria-hidden="true" />
-            <span>Clinician Approved</span>
-          </span>
+          <div className="row gap-2">
+            <DownloadReportButton caseId={caseData.case.id} label="Download Care PDF" size="sm" variant="secondary" />
+            <span className="badge badge-success">
+              <CheckCircle style={{ width: 11, height: 11 }} aria-hidden="true" />
+              <span>Clinician Approved</span>
+            </span>
+          </div>
         </div>
 
         <div className="card-body stack gap-4">
@@ -178,6 +182,7 @@ Emergency Helpline: 108`}
           <span>Return to Patient Portal</span>
         </Link>
         <div className="row gap-2">
+          <DownloadReportButton caseId={caseData.case.id} label="Download Care Summary (PDF)" variant="primary" />
           <a href="tel:108" className="btn btn-danger btn-sm">
             <PhoneCall style={{ width: 14, height: 14 }} aria-hidden="true" />
             <span>Emergency: Call 108</span>

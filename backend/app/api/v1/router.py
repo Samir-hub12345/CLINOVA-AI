@@ -33,6 +33,7 @@ from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.voice import router as voice_router
 from app.api.v1.endpoints.translation import router as translation_router
 from app.api.v1.endpoints.sync import router as sync_router
+from app.api.v1.endpoints.reports import router as reports_router
 
 api_router = APIRouter()
 
@@ -146,3 +147,4 @@ api_router.include_router(voice_router)
 api_router.include_router(foundation_router)
 api_router.include_router(translation_router, prefix="/translation")
 api_router.include_router(sync_router, prefix="/sync")
+api_router.include_router(reports_router)

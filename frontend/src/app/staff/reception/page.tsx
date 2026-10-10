@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { submitPatientIntake, getClinicalQueue, QueueResponse } from "@/lib/api";
 import { QueueItem } from "@/types";
+import { DownloadReportButton } from "@/components/common/DownloadReportButton";
 
 interface SyntheticPatientRecord {
   id: string;
@@ -279,7 +280,10 @@ export default function ReceptionWorkstationPage() {
                 </span>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {registeredSuccess.caseId && (
+                <DownloadReportButton caseId={registeredSuccess.caseId} label="Download Intake PDF" size="sm" variant="secondary" />
+              )}
               <Link href="/staff/triage" className="btn btn-primary btn-sm">
                 <span>View in Triage Queue</span>
                 <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />

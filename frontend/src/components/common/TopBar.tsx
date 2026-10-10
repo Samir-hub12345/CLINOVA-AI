@@ -18,6 +18,7 @@ import { Persona } from "@/types";
 import { getPersonas, getCurrentUser, switchPersona, login, logout } from "@/lib/api";
 import { RoleBadge } from "./RoleBadge";
 import { ConnectionStatus } from "./ConnectionStatus";
+import { NotificationCenter } from "./NotificationCenter";
 
 interface TopBarProps {
   onOpenReferralDrawer?: () => void;
@@ -251,8 +252,9 @@ export const TopBar: React.FC<TopBarProps> = ({
               <ConnectionStatus status="ONLINE" />
             </div>
 
-            {/* Quick Drawer Action Toggles */}
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {/* Clinical Notifications & Quick Drawer Action Toggles */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <NotificationCenter />
               {onOpenReferralDrawer && (
                 <button
                   onClick={onOpenReferralDrawer}

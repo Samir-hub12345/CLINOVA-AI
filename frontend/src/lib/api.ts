@@ -1548,3 +1548,24 @@ export async function triggerOfflineReconciliation(): Promise<{ synced: number; 
   return await processOfflineSync(pushSyncBatch);
 }
 
+export async function downloadCaseReportPdf(caseId: string): Promise<Blob> {
+  const url = `${API_BASE}/cases/${encodeURIComponent(caseId)}/report/pdf`;
+  const token = typeof window !== "undefined" ? localStorage.getItem("clinova_token") : null;
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(`Failed to download report PDF (HTTP ${res.status})`);
+  }
+  return await res.blob();
+}
+
+export function getCaseReportPdfUrl(caseId: string): string {
+  return `${API_BASE}/cases/${encodeURIComponent(caseId)}/report/pdf`;
+}
+
+export async function getCaseReportSummary(caseId: string): Promise<Record<string, unknown>> {
+  return await safeFetch<Record<string, unknown>>(`/cases/${encodeURIComponent(caseId)}/report/summary`);
+}
+

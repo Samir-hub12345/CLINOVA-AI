@@ -47,6 +47,7 @@ import { MultilingualTranslationPanel } from "@/components/staff/MultilingualTra
 import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/ui/States";
 import { RoleGuard } from "@/components/common/RoleGuard";
+import { DownloadReportButton } from "@/components/common/DownloadReportButton";
 
 interface DoctorWorkbenchViewProps {
   caseId: string;
@@ -305,6 +306,7 @@ export const DoctorWorkbenchView: React.FC<DoctorWorkbenchViewProps> = ({ caseId
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <DownloadReportButton caseId={caseInfo.id} label="Export Case PDF" size="sm" variant="outline" />
           <PriorityBadge tier={caseInfo.acuity_tier} />
           <StatusBadge status={caseInfo.status} />
         </div>
