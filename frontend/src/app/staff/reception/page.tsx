@@ -17,7 +17,9 @@ import {
   Users,
   Filter,
   Check,
+  Calendar,
 } from "lucide-react";
+import { TodayScheduleWidget } from "@/components/dashboard";
 import { submitPatientIntake, getClinicalQueue, QueueResponse } from "@/lib/api";
 import { QueueItem } from "@/types";
 import { DownloadReportButton } from "@/components/common/DownloadReportButton";
@@ -95,7 +97,7 @@ export default function ReceptionWorkstationPage() {
   const [records, setRecords] = useState<SyntheticPatientRecord[]>(INITIAL_RECORDS);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [activeTab, setActiveTab] = useState<"directory" | "register">("directory");
+  const [activeTab, setActiveTab] = useState<"directory" | "register" | "schedule">("directory");
 
   // Registration Form State
   const [fullName, setFullName] = useState("");
@@ -348,6 +350,14 @@ export default function ReceptionWorkstationPage() {
           >
             <UserPlus style={{ width: 16, height: 16 }} aria-hidden="true" />
             <span>Register New Patient</span>
+          </button>
+          <button
+            type="button"
+            className={`tab ${activeTab === "schedule" ? "active" : ""}`}
+            onClick={() => setActiveTab("schedule")}
+          >
+            <Calendar style={{ width: 16, height: 16 }} aria-hidden="true" />
+            <span>Today&apos;s Appointments</span>
           </button>
         </div>
 
@@ -806,6 +816,13 @@ export default function ReceptionWorkstationPage() {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* TAB 3: TODAY'S APPOINTMENTS & SCHEDULE */}
+        {activeTab === "schedule" && (
+          <div className="stack gap-4">
+            <TodayScheduleWidget compact={true} />
           </div>
         )}
       </div>

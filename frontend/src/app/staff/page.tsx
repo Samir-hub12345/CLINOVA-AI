@@ -14,6 +14,12 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { RoleGuard } from "@/components/common/RoleGuard";
+import {
+  StaffMetricTiles,
+  TodayScheduleWidget,
+  ClinicalReviewQueueWidget,
+  AIWorkflowSummaryWidget,
+} from "@/components/dashboard";
 
 export default function StaffLandingPage() {
   return (
@@ -31,16 +37,48 @@ export default function StaffLandingPage() {
       title="Staff Gateway Restricted"
       message="This surface is restricted to verified clinical, operational, and administrative healthcare network staff."
     >
-      <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--clinova-space-6)" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--clinova-space-6)" }}>
         <PageHeader
           title="Clinical & Operational Staff Gateway"
-          subtitle="Role-aware clinical workspaces for Medical Receptionists, Triage Nurses, Examining Physicians, and Health System Administrators"
+          subtitle="Role-aware clinical command center for Medical Receptionists, Triage Nurses, Examining Physicians, and Health System Administrators"
           breadcrumbs={[{ label: "Home", href: "/" }, { label: "Staff Gateway" }]}
         />
 
-        {/* Primary Clinical & Intake Workstations */}
-        <div>
-          <span className="clinova-label">CORE CLINICAL & INTAKE WORKSTATIONS</span>
+        {/* 1. OPERATIONAL CLINICAL METRICS */}
+        <section aria-labelledby="staff-metrics-heading">
+          <h2 id="staff-metrics-heading" className="sr-only">Operational Metrics</h2>
+          <StaffMetricTiles />
+        </section>
+
+        {/* 2. REAL-TIME CLINICAL OPERATIONS & REVIEW COMMAND CENTER */}
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.55fr) minmax(0, 1fr)",
+            gap: "var(--clinova-space-6)",
+            alignItems: "start",
+          }}
+          className="clinova-dash-grid"
+          aria-labelledby="ops-center-heading"
+        >
+          <h2 id="ops-center-heading" className="sr-only">Clinical Operations Center</h2>
+          {/* LEFT: Today's Schedule */}
+          <div className="stack gap-4">
+            <TodayScheduleWidget />
+          </div>
+
+          {/* RIGHT: Clinical Review Queue & AI Workflow Summary */}
+          <div className="stack gap-4">
+            <ClinicalReviewQueueWidget />
+            <AIWorkflowSummaryWidget />
+          </div>
+        </section>
+
+        {/* 3. CORE CLINICAL & INTAKE WORKSTATIONS */}
+        <section aria-labelledby="core-workstations-heading">
+          <span id="core-workstations-heading" className="clinova-label">
+            CORE CLINICAL & INTAKE WORKSTATIONS
+          </span>
           <div className="grid grid-3 gap-4" style={{ marginTop: 8 }}>
             {/* Workstation 0: Medical Reception */}
             <div
@@ -132,11 +170,13 @@ export default function StaffLandingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Operational, Administrative & System Surfaces */}
-        <div>
-          <span className="clinova-label">DEPARTMENTAL REVIEW, REFERRALS & ADMINISTRATION</span>
+        {/* 4. DEPARTMENTAL REVIEW, REFERRALS & ADMINISTRATION */}
+        <section aria-labelledby="dept-admin-heading">
+          <span id="dept-admin-heading" className="clinova-label">
+            DEPARTMENTAL REVIEW, REFERRALS & ADMINISTRATION
+          </span>
           <div className="grid grid-4 gap-3" style={{ marginTop: 8 }}>
             {/* Batch Review Queue */}
             <div className="card interactive stack between">
@@ -206,7 +246,7 @@ export default function StaffLandingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </RoleGuard>
   );

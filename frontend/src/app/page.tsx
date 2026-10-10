@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Activity,
   ArrowRight,
@@ -12,135 +11,43 @@ import {
   UserCheck,
   UserPlus,
   AlertOctagon,
-  Share2,
-  FileCheck2,
-  Lock,
-  Layers,
-  HeartPulse,
-  Clock,
   Sparkles,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  Calendar,
-  Users,
-  Building,
-  HelpCircle,
   LogIn,
-  ExternalLink,
+  HeartPulse,
+  Scale,
+  ShieldAlert,
+  Server,
 } from "lucide-react";
 
-interface AppointmentItem {
-  id: string;
-  time: string;
-  patient: string;
-  patientId: string;
-  type: string;
-  clinician: string;
-  status: "In progress" | "Completed" | "Scheduled";
-  mine: boolean;
-  avatar: string;
-}
-
-const APPOINTMENTS: AppointmentItem[] = [
-  {
-    id: "apt-1",
-    time: "09:00",
-    patient: "Manoj Das",
-    patientId: "CASE-SYNTH-003",
-    type: "Chest pain & acute triage consult",
-    clinician: "Dr. Priya Sharma",
-    status: "In progress",
-    mine: true,
-    avatar: "MD",
-  },
-  {
-    id: "apt-2",
-    time: "09:30",
-    patient: "Sunita Devi",
-    patientId: "CASE-SYNTH-004",
-    type: "Severe headache & hypertension review",
-    clinician: "Dr. Priya Sharma",
-    status: "Completed",
-    mine: true,
-    avatar: "SD",
-  },
-  {
-    id: "apt-3",
-    time: "10:15",
-    patient: "Rajesh Kumar",
-    patientId: "CASE-SYNTH-005",
-    type: "Respiratory distress & fever consult",
-    clinician: "Dr. Amit Roy",
-    status: "Scheduled",
-    mine: false,
-    avatar: "RK",
-  },
-  {
-    id: "apt-4",
-    time: "11:00",
-    patient: "Priya Sen",
-    patientId: "CASE-SYNTH-001",
-    type: "Abdominal colic & vitals acquisition",
-    clinician: "Dr. Priya Sharma",
-    status: "Scheduled",
-    mine: true,
-    avatar: "PS",
-  },
-  {
-    id: "apt-5",
-    time: "11:45",
-    patient: "Ananya Roy",
-    patientId: "CASE-SYNTH-006",
-    type: "Hypertension follow-up & medication review",
-    clinician: "Dr. Amit Roy",
-    status: "Scheduled",
-    mine: false,
-    avatar: "AR",
-  },
-];
-
 export default function HomePage() {
-  const router = useRouter();
-  const [scheduleScope, setScheduleScope] = useState<"mine" | "all">("mine");
-
-  const filteredAppointments =
-    scheduleScope === "mine"
-      ? APPOINTMENTS.filter((apt) => apt.mine)
-      : APPOINTMENTS;
-
-  const metricTiles = [
+  const platformStats = [
     {
-      label: "Patients Scheduled Today",
-      value: "24",
-      note: "18 seen & evaluated so far",
-      icon: Users,
-      tile: "tile-navy",
-      to: "/staff/triage",
-    },
-    {
-      label: "Consultations in Progress",
-      value: "6",
-      note: "Across 4 active clinical bays",
-      icon: Stethoscope,
-      tile: "tile-info",
-      to: "/staff/reception",
-    },
-    {
-      label: "Notes Awaiting Clinician Review",
-      value: "4",
-      note: "Physician sign-off & human gate",
-      icon: FileCheck2,
-      tile: "tile-warning",
-      to: "/staff/review",
-    },
-    {
-      label: "SBAR Transfers & Follow-Ups",
-      value: "8",
-      note: "Regional telemetry active",
-      icon: Share2,
+      label: "Production Architecture",
+      value: "₹0 Stack",
+      note: "100% open-source, self-hostable • Zero paid API fees",
+      icon: Server,
       tile: "tile-teal",
-      to: "/referrals",
+    },
+    {
+      label: "Privacy & Statutory Compliance",
+      value: "Zero-PII",
+      note: "DPDP Act 2023 & NMC RMP Regulations 2023 aligned",
+      icon: ShieldCheck,
+      tile: "tile-navy",
+    },
+    {
+      label: "Clinical Guardrails",
+      value: "Deterministic",
+      note: "Dual-engine NEWS2 & Shock Index vital algorithms",
+      icon: HeartPulse,
+      tile: "tile-warning",
+    },
+    {
+      label: "Emergency Protocol",
+      value: "Paschim Banga",
+      note: "Constitutional non-refusal emergency resuscitation",
+      icon: AlertOctagon,
+      tile: "tile-info",
     },
   ];
 
@@ -189,85 +96,20 @@ export default function HomePage() {
     },
   ];
 
-  const taskQueueItems = [
-    {
-      id: "task-1",
-      title: "Consultation note awaiting review",
-      who: "Dr. Priya Sharma • Patient Manoj Das (Chest Pain)",
-      to: "/staff/review",
-      badge: "tile-navy",
-      icon: FileText,
-    },
-    {
-      id: "task-2",
-      title: "Missing information in patient record",
-      who: "Epistemic Check • Conflicting lisinopril dosage",
-      to: "/staff/cases/CASE-SYNTH-003",
-      badge: "tile-warning",
-      icon: AlertTriangle,
-    },
-    {
-      id: "task-3",
-      title: "Laboratory result awaiting clinician review",
-      who: "Biochemistry • Cardiac Troponin-I: 0.12 ng/mL (High)",
-      to: "/staff/cases/CASE-SYNTH-003",
-      badge: "tile-info",
-      icon: Activity,
-    },
-    {
-      id: "task-4",
-      title: "Follow-up instructions awaiting approval",
-      who: "Odia/Hindi Vernacular • BP monitoring schedule",
-      to: "/patient/case/CASE-SYNTH-003",
-      badge: "tile-teal",
-      icon: CheckCircle2,
-    },
+  const masterCaseLoopStages = [
+    { step: "1. ENTRY", label: "Public / Portal Entry" },
+    { step: "2. CONSENT", label: "DPDP Act Digital Consent" },
+    { step: "3. PATHWAY", label: "Staff-Assigned Pathway" },
+    { step: "4. INTAKE", label: "Symptoms & Evidence" },
+    { step: "5. EXTRACTION", label: "Provenance & Uncertainty" },
+    { step: "6. TIMELINE", label: "Chronological Progression" },
+    { step: "7. ADAPTIVE", label: "Targeted Inquiries" },
+    { step: "8. CAREGRAPH", label: "Risk & Trajectory" },
+    { step: "9. SAFETY", label: "Deterministic Alarms" },
+    { step: "10. REVIEW", label: "Clinician Authority Gate" },
+    { step: "11. FACILITY", label: "SBAR Referral" },
+    { step: "12. OUTCOME", label: "Outcome Capture & Telemetry" },
   ];
-
-  const recentActivity = [
-    {
-      id: "act-1",
-      actor: "Clinova AI",
-      action: "Calculated NEWS2 score (8 - High)",
-      source: "Bedside vitals acquisition • Bay 2",
-      time: "10 mins ago",
-      isAi: true,
-    },
-    {
-      id: "act-2",
-      actor: "Dr. Priya Sharma",
-      action: "Verified ECG findings & signed admission",
-      source: "Encounter ENC-5310 • Acute Coronary Bay",
-      time: "24 mins ago",
-      isAi: false,
-    },
-    {
-      id: "act-3",
-      actor: "Ananya Patel, RN",
-      action: "Completed triage intake & shock index check",
-      source: "Triage Queue • Cuttack DHH",
-      time: "42 mins ago",
-      isAi: false,
-    },
-    {
-      id: "act-4",
-      actor: "Clinova AI",
-      action: "Prepared SBAR transfer dossier",
-      source: "FacilityGraph referral to SCB Cath Lab",
-      time: "1 hour ago",
-      isAi: true,
-    },
-  ];
-
-  const renderStatusBadge = (status: "In progress" | "Completed" | "Scheduled") => {
-    if (status === "In progress") {
-      return <span className="badge badge-teal">In progress</span>;
-    }
-    if (status === "Completed") {
-      return <span className="badge badge-success">Completed</span>;
-    }
-    return <span className="badge badge-warning">Scheduled</span>;
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--clinova-space-8)", padding: "var(--clinova-space-4) 0" }}>
@@ -313,11 +155,11 @@ export default function HomePage() {
         >
           CLINOVA AI connects <strong>Patient Risk</strong>, <strong>Evidence Uncertainty</strong>,{" "}
           <strong>Facility Capability</strong>, <strong>System Demand</strong>, and <strong>Outcomes</strong>{" "}
-          to identify the <strong>Safest Achievable Care Pathway</strong> — while healthcare professionals
+          to identify the <strong>Safest Achievable Care Pathway</strong> — while registered healthcare professionals
           stay strictly in control of every clinical decision.
         </p>
 
-        {/* Quick Launch Action Buttons */}
+        {/* Primary Product Entry Action CTAs */}
         <div
           style={{
             display: "flex",
@@ -334,14 +176,14 @@ export default function HomePage() {
             <ArrowRight style={{ width: 16, height: 16 }} aria-hidden="true" />
           </Link>
 
+          <Link href="/staff" className="btn btn-primary btn-lg">
+            <Activity style={{ width: 18, height: 18 }} aria-hidden="true" />
+            <span>Staff Gateway</span>
+          </Link>
+
           <Link href="/staff/triage" className="btn btn-secondary btn-lg">
             <UserCheck style={{ width: 18, height: 18, color: "var(--warning)" }} aria-hidden="true" />
             <span>Nurse Triage</span>
-          </Link>
-
-          <Link href="/staff/reception" className="btn btn-primary btn-lg">
-            <UserPlus style={{ width: 18, height: 18 }} aria-hidden="true" />
-            <span>Reception Desk</span>
           </Link>
 
           <Link href="/patient/intake" className="btn btn-secondary btn-lg">
@@ -356,332 +198,41 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. SIGNATURE METRIC TILES (FROM REFERENCE DASHBOARD) */}
-      <section>
+      {/* 2. PLATFORM ARCHITECTURAL HIGHLIGHTS & CAPABILITIES */}
+      <section aria-labelledby="platform-stats-heading">
+        <h2 id="platform-stats-heading" className="sr-only">Platform Architectural Highlights</h2>
         <div className="grid grid-4 gap-4">
-          {metricTiles.map((tile) => {
-            const Icon = tile.icon;
+          {platformStats.map((stat) => {
+            const Icon = stat.icon;
             return (
-              <Link
-                key={tile.label}
-                href={tile.to}
-                className="card interactive metric-card"
-                style={{ textDecoration: "none", color: "inherit" }}
+              <div
+                key={stat.label}
+                className="card metric-card"
+                style={{ color: "inherit" }}
               >
                 <div className="row between">
-                  <span className="small subtle medium">{tile.label}</span>
-                  <span className={`icon-tile ${tile.tile}`}>
+                  <span className="small subtle medium">{stat.label}</span>
+                  <span className={`icon-tile ${stat.tile}`}>
                     <Icon aria-hidden="true" />
                   </span>
                 </div>
                 <div className="stat-value" style={{ color: "var(--navy-900)" }}>
-                  {tile.value}
+                  {stat.value}
                 </div>
-                <div className="xs muted">{tile.note}</div>
-              </Link>
+                <div className="xs muted">{stat.note}</div>
+              </div>
             );
           })}
         </div>
       </section>
 
-      {/* 3. REAL-TIME CLINICAL OPERATIONS & AI GOVERNANCE DASHBOARD */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.55fr) minmax(0, 1fr)",
-          gap: "var(--clinova-space-6)",
-          alignItems: "start",
-        }}
-        className="clinova-dash-grid"
-      >
-        {/* LEFT COLUMN: Today's Schedule + Activity Timeline */}
-        <div className="stack gap-4">
-          {/* Today's Schedule Card */}
-          <div className="card" aria-labelledby="sched-heading">
-            <div className="card-header">
-              <div className="row gap-2">
-                <Calendar style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
-                <h2 id="sched-heading" style={{ margin: 0 }}>Today&apos;s Schedule</h2>
-              </div>
-              <div className="segmented" role="group" aria-label="Schedule scope">
-                <button
-                  type="button"
-                  aria-pressed={scheduleScope === "mine"}
-                  onClick={() => setScheduleScope("mine")}
-                >
-                  My patients ({APPOINTMENTS.filter((a) => a.mine).length})
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={scheduleScope === "all"}
-                  onClick={() => setScheduleScope("all")}
-                >
-                  Whole clinic ({APPOINTMENTS.length})
-                </button>
-              </div>
-            </div>
-            <div className="table-wrap">
-              <table className="table responsive">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Patient</th>
-                    <th>Consultation Type</th>
-                    {scheduleScope === "all" && <th>Clinician</th>}
-                    <th>Status</th>
-                    <th style={{ textAlign: "right" }}>
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAppointments.map((apt) => (
-                    <tr
-                      key={apt.id}
-                      className="clickable"
-                      onClick={() => {
-                        router.push(`/staff/cases/${apt.patientId}`);
-                      }}
-                    >
-                      <td data-label="Time" className="tnum medium">
-                        {apt.time}
-                      </td>
-                      <td className="primary-cell">
-                        <div className="row gap-2">
-                          <span className="avatar sm">{apt.avatar}</span>
-                          <span className="medium" style={{ color: "var(--navy-900)" }}>
-                            {apt.patient}
-                          </span>
-                          {apt.patientId === "CASE-SYNTH-003" && (
-                            <span className="badge badge-teal">Demo</span>
-                          )}
-                        </div>
-                      </td>
-                      <td data-label="Type" className="subtle">
-                        {apt.type}
-                      </td>
-                      {scheduleScope === "all" && (
-                        <td data-label="Clinician" className="subtle">
-                          {apt.clinician}
-                        </td>
-                      )}
-                      <td data-label="Status">
-                        {renderStatusBadge(apt.status)}
-                      </td>
-                      <td className="hide-sm" style={{ textAlign: "right" }}>
-                        <Link
-                          href={`/staff/cases/${apt.patientId}`}
-                          className="btn btn-ghost btn-sm"
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label={`Open record for ${apt.patient}`}
-                        >
-                          <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="card-footer">
-              <Link href="/staff/reception" className="btn btn-secondary btn-sm btn-block">
-                <span>Open Reception & Intake Desk</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Immutable Activity Audit Timeline */}
-          <div className="card" aria-labelledby="audit-heading">
-            <div className="card-header">
-              <div className="row gap-2">
-                <Clock style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
-                <h2 id="audit-heading" style={{ margin: 0 }}>Recent Patient Activity</h2>
-              </div>
-              <Link href="/system" className="small" style={{ color: "var(--teal-700)" }}>
-                View Audit Ledger
-              </Link>
-            </div>
-            <div className="card-body">
-              <ol className="list-reset timeline">
-                {recentActivity.map((act) => (
-                  <li key={act.id} className="timeline-item">
-                    <span className="timeline-dot">
-                      {act.isAi ? (
-                        <Sparkles style={{ width: 8, height: 8, color: "var(--teal-600)" }} aria-hidden="true" />
-                      ) : (
-                        <UserCheck style={{ width: 8, height: 8, color: "var(--success)" }} aria-hidden="true" />
-                      )}
-                    </span>
-                    <div className="stack" style={{ gap: 2 }}>
-                      <div className="small">
-                        <span className="medium" style={{ color: "var(--navy-900)" }}>
-                          {act.actor}
-                        </span>{" "}
-                        <span className="subtle">{act.action}</span>
-                      </div>
-                      <div className="xs muted">
-                        {act.source} • {act.time}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <div className="card-footer">
-              <Link href="/system" className="btn btn-secondary btn-sm btn-block">
-                <span>Inspect Cryptographic SHA-256 Ledger</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Clinical Review Queue + AI Workflow Summary */}
-        <div className="stack gap-4">
-          {/* Clinical Task Queue Card */}
-          <div className="card" aria-labelledby="tasks-heading">
-            <div className="card-header">
-              <div className="row gap-2">
-                <FileCheck2 style={{ width: 18, height: 18, color: "var(--warning)" }} aria-hidden="true" />
-                <h2 id="tasks-heading" style={{ margin: 0 }}>Clinical Review Queue</h2>
-              </div>
-              <span className="badge badge-warning">4 Need Attention</span>
-            </div>
-            <div className="card-body" style={{ padding: 0 }}>
-              <ul className="list-reset">
-                {taskQueueItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                      <Link
-                        href={item.to}
-                        className="row between gap-3 interactive"
-                        style={{
-                          padding: "12px 18px",
-                          color: "inherit",
-                          textDecoration: "none",
-                          display: "flex",
-                        }}
-                      >
-                        <div className="row gap-3">
-                          <span className={`icon-tile ${item.badge}`} style={{ width: 32, height: 32 }}>
-                            <Icon style={{ width: 16, height: 16 }} aria-hidden="true" />
-                          </span>
-                          <div className="stack gap-1">
-                            <span className="small medium" style={{ color: "var(--navy-900)" }}>
-                              {item.title}
-                            </span>
-                            <span className="xs muted">{item.who}</span>
-                          </div>
-                        </div>
-                        <ArrowRight style={{ width: 15, height: 15, color: "var(--text-4)" }} aria-hidden="true" />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-            <div className="card-footer">
-              <Link href="/staff/review" className="btn btn-secondary btn-sm btn-block">
-                <span>View Full Attending Review Worklist</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-
-          {/* AI Workflow Summary Card */}
-          <div className="card" aria-labelledby="ai-summary-heading">
-            <div className="card-header">
-              <div className="row gap-2">
-                <span className="ai-mark">
-                  <Sparkles aria-hidden="true" />
-                </span>
-                <h2 id="ai-summary-heading" style={{ margin: 0 }}>AI Workflow Summary</h2>
-              </div>
-              <span className="badge badge-teal">Today</span>
-            </div>
-            <div className="card-body stack gap-4">
-              <div className="grid grid-3" style={{ gap: 10 }}>
-                <div
-                  className="stack gap-1"
-                  style={{
-                    padding: 12,
-                    borderRadius: "var(--r-md)",
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <span className="stat-value" style={{ fontSize: "1.375rem" }}>16</span>
-                  <span className="xs muted" style={{ lineHeight: 1.3 }}>Drafts prepared</span>
-                </div>
-                <div
-                  className="stack gap-1"
-                  style={{
-                    padding: 12,
-                    borderRadius: "var(--r-md)",
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <span className="stat-value" style={{ fontSize: "1.375rem" }}>14</span>
-                  <span className="xs muted" style={{ lineHeight: 1.3 }}>Reviewed by staff</span>
-                </div>
-                <div
-                  className="stack gap-1"
-                  style={{
-                    padding: 12,
-                    borderRadius: "var(--r-md)",
-                    background: "var(--warning-bg)",
-                    border: "1px solid #f6d6a8",
-                  }}
-                >
-                  <span className="stat-value" style={{ fontSize: "1.375rem", color: "var(--warning-text)" }}>2</span>
-                  <span className="xs muted" style={{ lineHeight: 1.3, color: "var(--warning-text)" }}>Awaiting review</span>
-                </div>
-              </div>
-
-              <div className="stack gap-2">
-                {[
-                  { label: "Clinical documentation drafts", count: 4 },
-                  { label: "NEWS2 & laboratory summaries", count: 3 },
-                  { label: "Patient follow-up instructions", count: 2 },
-                  { label: "Epistemic uncertainty checks", count: 1 },
-                ].map((cat) => (
-                  <div key={cat.label} className="row between small">
-                    <span className="subtle">{cat.label}</span>
-                    <span className="tnum medium" style={{ color: "var(--navy-900)" }}>{cat.count}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="alert alert-ai" style={{ padding: "8px 12px" }}>
-                <ShieldCheck style={{ width: 16, height: 16, flexShrink: 0 }} aria-hidden="true" />
-                <span style={{ fontSize: "var(--fs-xs)", lineHeight: 1.4 }}>
-                  Nothing drafted by AI is added to a chart, signed, or transmitted without definitive clinician approval.
-                </span>
-              </div>
-
-              <Link
-                href="/staff/review"
-                className="btn btn-secondary btn-sm"
-                style={{ alignSelf: "flex-start" }}
-              >
-                <span>Open Review Center</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. SIGNATURE 6-STAGE WORKFLOW ENGINE (FROM REFERENCE cS & auth-aside) */}
-      <section className="card" style={{ padding: "var(--s-6)" }}>
+      {/* 3. THE CONTINUOUS CLINICAL WORKFLOW (6-STAGE CONTINUUM) */}
+      <section className="card" style={{ padding: "var(--s-6)" }} aria-labelledby="workflow-heading">
         <div style={{ marginBottom: 20 }}>
           <div className="row between wrap gap-2">
             <div>
               <span className="section-title">THE CONTINUOUS CLINICAL WORKFLOW</span>
-              <h2 style={{ fontSize: "1.5rem", marginTop: 4, color: "var(--navy-900)", fontWeight: 700 }}>
+              <h2 id="workflow-heading" style={{ fontSize: "1.5rem", marginTop: 4, color: "var(--navy-900)", fontWeight: 700 }}>
                 How Clinova AI Coordinates Patient Care
               </h2>
             </div>
@@ -714,11 +265,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. SIX SPECIALIZED ROLE WORKSPACES */}
-      <section style={{ display: "flex", flexDirection: "column", gap: "var(--clinova-space-4)" }}>
+      {/* 4. SIX SPECIALIZED ROLE WORKSPACES (AUTHENTIC ROLE INGRESS) */}
+      <section style={{ display: "flex", flexDirection: "column", gap: "var(--clinova-space-4)" }} aria-labelledby="roles-heading">
         <div style={{ textAlign: "center" }}>
           <span className="section-title">ROLE-BASED GOVERNANCE & ARCHITECTURE</span>
-          <h2 style={{ fontSize: "1.875rem", marginTop: 4, color: "var(--navy-900)", fontWeight: 700 }}>
+          <h2 id="roles-heading" style={{ fontSize: "1.875rem", marginTop: 4, color: "var(--navy-900)", fontWeight: 700 }}>
             Six Distinct Role Experiences
           </h2>
           <p style={{ fontSize: "0.875rem", color: "var(--text-3)", marginTop: 2 }}>
@@ -939,7 +490,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. THE 13-STAGE CONTINUOUS CARE INTELLIGENCE LOOP */}
+      {/* 5. THE 12-STAGE MASTER CASE CONTINUOUS LOOP */}
       <section
         className="card"
         style={{
@@ -948,10 +499,11 @@ export default function HomePage() {
           gap: "var(--clinova-space-4)",
           padding: "var(--clinova-space-6)",
         }}
+        aria-labelledby="loop-heading"
       >
         <div>
-          <span className="section-title">THE 13-STAGE MASTER CASE CONTINUOUS LOOP</span>
-          <h2 style={{ fontSize: "1.5rem", marginTop: 4, color: "var(--navy-900)", fontWeight: 700 }}>
+          <span className="section-title">THE 12-STAGE MASTER CASE CONTINUOUS LOOP</span>
+          <h2 id="loop-heading" style={{ fontSize: "1.5rem", marginTop: 4, color: "var(--navy-900)", fontWeight: 700 }}>
             Connected Clinical Care Journey
           </h2>
           <p className="xs muted" style={{ marginTop: 2 }}>
@@ -967,21 +519,7 @@ export default function HomePage() {
             textAlign: "center",
           }}
         >
-          {[
-            { step: "1. ENTRY", label: "Public / Portal Entry" },
-            { step: "2. CONSENT", label: "DPDP Act Digital Consent" },
-            { step: "3. PATHWAY", label: "Staff-Assigned Pathway" },
-            { step: "4. INTAKE", label: "Symptoms & Evidence" },
-            { step: "5. EXTRACTION", label: "Provenance & Uncertainty" },
-            { step: "6. TIMELINE", label: "Chronological Progression" },
-            { step: "7. ADAPTIVE", label: "Targeted Inquiries" },
-            { step: "8. CAREGRAPH", label: "Risk & Trajectory" },
-            { step: "9. SAFETY", label: "Deterministic Alarms" },
-            { step: "10. REVIEW", label: "Clinician Authority" },
-            { step: "11. FACILITY", label: "SBAR Referral" },
-            { step: "12. OUTCOME", label: "Outcome Capture" },
-            { step: "13. SIGNAL", label: "SignalGraph Telemetry" },
-          ].map((item) => (
+          {masterCaseLoopStages.map((item) => (
             <div
               key={item.step}
               style={{
@@ -1005,8 +543,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 7. CLINICAL GOVERNANCE & STATUTORY PILLARS */}
-      <section className="grid grid-3 gap-4">
+      {/* 6. CLINICAL GOVERNANCE & STATUTORY PILLARS */}
+      <section className="grid grid-3 gap-4" aria-labelledby="pillars-heading">
+        <h2 id="pillars-heading" className="sr-only">Clinical Governance & Statutory Pillars</h2>
         <div className="card">
           <div className="card-body tight stack gap-2">
             <div className="row gap-2">
@@ -1039,6 +578,32 @@ export default function HomePage() {
             </div>
             <p className="xs subtle" style={{ margin: 0, lineHeight: 1.5 }}>
               Supreme Court constitutional emergency doctrine. Administrative delays or lacking paperwork must never prevent clinical resuscitation in life-threatening conditions.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. STATUTORY CLINICAL NON-DELEGATION NOTICE */}
+      <section
+        className="card"
+        style={{
+          borderLeft: "6px solid var(--warning)",
+          backgroundColor: "var(--surface)",
+          padding: "var(--clinova-space-4) var(--clinova-space-6)",
+        }}
+        aria-labelledby="disclaimer-banner-heading"
+      >
+        <div className="row gap-3 items-start">
+          <ShieldAlert style={{ width: 22, height: 22, color: "var(--warning)", flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+          <div className="stack gap-1">
+            <strong id="disclaimer-banner-heading" style={{ fontSize: "0.875rem", color: "var(--navy-900)" }}>
+              Mandatory Clinical Decision Support Disclaimer (NMC 2023 & CDSCO)
+            </strong>
+            <p className="xs subtle" style={{ margin: 0, lineHeight: 1.6 }}>
+              CLINOVA AI operates strictly under the principle of <strong>Human-in-the-Loop Clinical Non-Delegation</strong>.
+              The platform does not diagnose, prescribe, or execute medical orders autonomously. All care pathways,
+              NEWS2 risk scores, epistemic evaluations, and referral recommendations require review, authentication, and non-repudiable
+              digital sign-off by a licensed Registered Medical Practitioner.
             </p>
           </div>
         </div>
