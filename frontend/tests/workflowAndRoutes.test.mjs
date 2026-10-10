@@ -396,16 +396,25 @@ console.log("--- Starting CLINOVA Master Workflow, Route & Interaction Test Suit
   assert.ok(!pageContent.includes("AIWorkflowSummaryWidget"), "Landing page must not contain AIWorkflowSummaryWidget");
   assert.ok(!pageContent.includes("Manoj Das"), "Landing page must not hardcode patient schedules");
 
-  // 2. High-impact public landing page content must be present
+  // 2. Direct workstation bypass buttons must NOT be on public landing page
+  assert.ok(!pageContent.includes('href="/staff/cases/CASE-'), "Landing page must not contain direct case workbench links");
+  assert.ok(!pageContent.includes('href="/staff/triage"'), "Landing page must not contain direct nurse triage bypass link");
+  assert.ok(!pageContent.includes('href="/staff/reception"'), "Landing page must not contain direct reception bypass link");
+  assert.ok(!pageContent.includes('href="/facilities"'), "Landing page must not contain direct facility admin bypass link");
+  assert.ok(!pageContent.includes('href="/system"'), "Landing page must not contain direct system admin bypass link");
+
+  // 3. High-impact public landing page content & authentic RBAC gate must be present
   assert.ok(pageContent.includes("Less paperwork"), "Hero headline must be present");
   assert.ok(pageContent.includes("Continuous Care Intelligence"), "Continuous care badge must be present");
   assert.ok(pageContent.includes("THE CONTINUOUS CLINICAL WORKFLOW"), "6-stage clinical continuum must be present");
   assert.ok(pageContent.includes("THE 12-STAGE MASTER CASE CONTINUOUS LOOP"), "12-stage Master Case loop must be present");
   assert.ok(pageContent.includes("Six Distinct Role Experiences"), "Role ingress section must be present");
+  assert.ok(pageContent.includes("Role-Based Access Control (RBAC) & Hospital Authentication"), "RBAC hospital authentication banner must be present");
+  assert.ok(pageContent.includes('href="/login"'), "Landing page must route staff authentication through /login");
   assert.ok(pageContent.includes("Paschim Banga Doctrine"), "Constitutional emergency doctrine must be present");
   assert.ok(pageContent.includes("Zero-PII & Statutory Compliance"), "DPDP Act compliance pillar must be present");
 
-  console.log("✓ Test 14: Public Landing Page verifies clean role segregation & architectural pillars");
+  console.log("✓ Test 14: Public Landing Page verifies clean role segregation, workstation bypass removal & architectural pillars");
 }
 
 // Test 15: Operational Clinical Dashboards Role Placement

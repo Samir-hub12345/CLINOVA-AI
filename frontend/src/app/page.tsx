@@ -17,6 +17,7 @@ import {
   Scale,
   ShieldAlert,
   Server,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -159,7 +160,7 @@ export default function HomePage() {
           stay strictly in control of every clinical decision.
         </p>
 
-        {/* Primary Product Entry Action CTAs */}
+        {/* Public Entry Action CTAs */}
         <div
           style={{
             display: "flex",
@@ -170,36 +171,26 @@ export default function HomePage() {
             marginTop: 8,
           }}
         >
-          <Link href="/staff/cases/CASE-SYNTH-003" className="btn btn-accent btn-lg">
-            <Stethoscope style={{ width: 18, height: 18 }} aria-hidden="true" />
-            <span>Doctor Workbench</span>
+          <Link href="/login" className="btn btn-primary btn-lg">
+            <LogIn style={{ width: 18, height: 18 }} aria-hidden="true" />
+            <span>Staff Sign In</span>
             <ArrowRight style={{ width: 16, height: 16 }} aria-hidden="true" />
           </Link>
 
-          <Link href="/staff" className="btn btn-primary btn-lg">
-            <Activity style={{ width: 18, height: 18 }} aria-hidden="true" />
-            <span>Staff Gateway</span>
-          </Link>
-
-          <Link href="/staff/triage" className="btn btn-secondary btn-lg">
-            <UserCheck style={{ width: 18, height: 18, color: "var(--warning)" }} aria-hidden="true" />
-            <span>Nurse Triage</span>
-          </Link>
-
-          <Link href="/patient/intake" className="btn btn-secondary btn-lg">
+          <Link href="/patient" className="btn btn-secondary btn-lg">
             <Activity style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
-            <span>Patient Self-Intake</span>
+            <span>Patient Portal & Intake</span>
           </Link>
 
-          <Link href="/login" className="btn btn-ghost btn-lg" style={{ border: "1px solid var(--border-strong)" }}>
-            <LogIn style={{ width: 16, height: 16 }} aria-hidden="true" />
-            <span>Staff Sign In</span>
-          </Link>
+          <a href="#capabilities" className="btn btn-ghost btn-lg" style={{ border: "1px solid var(--border-strong)" }}>
+            <ShieldCheck style={{ width: 16, height: 16 }} aria-hidden="true" />
+            <span>Platform Capabilities</span>
+          </a>
         </div>
       </section>
 
       {/* 2. PLATFORM ARCHITECTURAL HIGHLIGHTS & CAPABILITIES */}
-      <section aria-labelledby="platform-stats-heading">
+      <section id="capabilities" aria-labelledby="platform-stats-heading">
         <h2 id="platform-stats-heading" className="sr-only">Platform Architectural Highlights</h2>
         <div className="grid grid-4 gap-4">
           {platformStats.map((stat) => {
@@ -305,11 +296,11 @@ export default function HomePage() {
                 <li>Follow-up appointments & medication guidance</li>
               </ul>
             </div>
-            <div className="card-footer">
-              <Link href="/patient" className="btn btn-secondary btn-sm btn-block">
-                <span>Access Patient Portal</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
+            <div className="card-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 12 }}>
+              <span className="xs subtle" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <CheckCircle2 style={{ width: 14, height: 14, color: "var(--teal-600)" }} aria-hidden="true" />
+                <span>Patient-facing self-service & vernacular intake</span>
+              </span>
             </div>
           </div>
 
@@ -340,11 +331,11 @@ export default function HomePage() {
                 <li>Zero autonomous medical diagnoses</li>
               </ul>
             </div>
-            <div className="card-footer">
-              <Link href="/staff/reception" className="btn btn-primary btn-sm btn-block">
-                <span>Access Reception Desk</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
+            <div className="card-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 12 }}>
+              <span className="xs subtle" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <CheckCircle2 style={{ width: 14, height: 14, color: "var(--navy-800)" }} aria-hidden="true" />
+                <span>Registration & staff-directed routing only</span>
+              </span>
             </div>
           </div>
 
@@ -375,11 +366,11 @@ export default function HomePage() {
                 <li>Emergency fast-track bay diversion</li>
               </ul>
             </div>
-            <div className="card-footer">
-              <Link href="/staff/triage" className="btn btn-secondary btn-sm btn-block">
-                <span>Access Triage Workstation</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
+            <div className="card-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 12 }}>
+              <span className="xs subtle" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <CheckCircle2 style={{ width: 14, height: 14, color: "var(--warning)" }} aria-hidden="true" />
+                <span>Vital acquisition & acute clinical scoring</span>
+              </span>
             </div>
           </div>
 
@@ -410,14 +401,11 @@ export default function HomePage() {
                 <li>Strict human clinician decision gate</li>
               </ul>
             </div>
-            <div className="card-footer" style={{ display: "flex", gap: 8 }}>
-              <Link href="/staff/cases/CASE-SYNTH-003" className="btn btn-accent btn-sm" style={{ flex: 1 }}>
-                <span>Doctor Workbench</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
-              <Link href="/staff/review" className="btn btn-ghost btn-sm" style={{ border: "1px solid var(--border-strong)" }}>
-                <span>Review Queue</span>
-              </Link>
+            <div className="card-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 12 }}>
+              <span className="xs subtle" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <CheckCircle2 style={{ width: 14, height: 14, color: "#0f766e" }} aria-hidden="true" />
+                <span>Authoritative clinical sign-off & human decision gate</span>
+              </span>
             </div>
           </div>
 
@@ -448,11 +436,11 @@ export default function HomePage() {
                 <li>Isolated to designated facility scope</li>
               </ul>
             </div>
-            <div className="card-footer">
-              <Link href="/facilities" className="btn btn-secondary btn-sm btn-block">
-                <span>Access Facility Operations</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
+            <div className="card-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 12 }}>
+              <span className="xs subtle" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <CheckCircle2 style={{ width: 14, height: 14, color: "var(--info)" }} aria-hidden="true" />
+                <span>Facility-scoped telemetry & regional transfer</span>
+              </span>
             </div>
           </div>
 
@@ -483,12 +471,48 @@ export default function HomePage() {
                 <li>Zero clinical authority bypass</li>
               </ul>
             </div>
-            <div className="card-footer">
-              <Link href="/system" className="btn btn-secondary btn-sm btn-block">
-                <span>Access System Console</span>
-                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-              </Link>
+            <div className="card-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 12 }}>
+              <span className="xs subtle" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <CheckCircle2 style={{ width: 14, height: 14, color: "#475569" }} aria-hidden="true" />
+                <span>Security audit ledger & zero diagnostic bypass</span>
+              </span>
             </div>
+          </div>
+        </div>
+
+        {/* Role Access Security & Login Gateway Banner */}
+        <div
+          className="card"
+          style={{
+            backgroundColor: "var(--surface-sunken)",
+            border: "1px solid var(--border-strong)",
+            padding: "var(--s-4) var(--s-6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 16,
+            borderRadius: "var(--r-md)",
+            marginTop: 4,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, maxWidth: 680 }}>
+            <ShieldCheck style={{ width: 28, height: 28, color: "var(--teal-600)", flexShrink: 0 }} aria-hidden="true" />
+            <div>
+              <strong style={{ fontSize: "0.9375rem", color: "var(--navy-900)", display: "block" }}>
+                Role-Based Access Control (RBAC) & Hospital Authentication
+              </strong>
+              <p className="xs subtle" style={{ margin: 0, lineHeight: 1.4 }}>
+                Access to clinical workstations, triage queues, and administrative consoles requires authenticated credentials. Unauthorized bypass is prevented at the network and token boundary.
+              </p>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <Link href="/login" className="btn btn-primary btn-sm">
+              <LogIn style={{ width: 14, height: 14 }} aria-hidden="true" />
+              <span>Sign In to Authorized Workstation</span>
+              <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+            </Link>
           </div>
         </div>
       </section>
