@@ -110,6 +110,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   const navLinks = [
     { label: "Overview", href: "/" },
+    { label: "Reception", href: "/staff/reception" },
     { label: "Patient Intake", href: "/patient" },
     { label: "Nurse Triage", href: "/staff/triage" },
     { label: "Doctor Review", href: "/staff/review" },
@@ -540,7 +541,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   Quick Demo Personas:
                 </span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {["clinician", "nurse", "referral", "facility_admin", "auditor", "sysadmin", "patient"].map((u) => (
+                  {["clinician", "nurse", "receptionist", "referral", "facility_admin", "auditor", "sysadmin", "patient"].map((u) => (
                     <button
                       key={u}
                       type="button"

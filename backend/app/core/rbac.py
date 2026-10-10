@@ -19,6 +19,7 @@ from app.core.errors import ClinovaAPIError
 
 # Canonical Roles (DOC-03)
 ROLE_PATIENT = "PATIENT"
+ROLE_RECEPTIONIST = "RECEPTIONIST"
 ROLE_NURSE = "NURSE"
 ROLE_CLINICIAN = "CLINICIAN"
 ROLE_DOCTOR = "DOCTOR"  # Canonical alias for CLINICIAN
@@ -36,6 +37,7 @@ ROLE_HARNESS = "HARNESS"
 
 ALL_CANONICAL_ROLES: Set[str] = {
     ROLE_PATIENT,
+    ROLE_RECEPTIONIST,
     ROLE_NURSE,
     ROLE_CLINICIAN,
     ROLE_REFERRAL_COORDINATOR,
@@ -113,6 +115,14 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.CASE_LIST,         # Self-scope listing (verified in policy/endpoint)
         Permission.FOLLOW_UP_ANSWER,  # Answering questions addressed to patient
         Permission.SYNC_PUSH,         # Patient offline intake sync push
+    },
+    ROLE_RECEPTIONIST: {
+        Permission.USER_SELF_READ,
+        Permission.CASE_CREATE,       # Patient registration & intake initiation
+        Permission.CASE_READ,         # Case lookup for registration
+        Permission.CASE_LIST,         # Case lookup & queue search
+        Permission.SYNC_PUSH,
+        Permission.SYNC_READ,
     },
     ROLE_NURSE: {
         Permission.USER_SELF_READ,

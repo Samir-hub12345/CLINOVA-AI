@@ -197,6 +197,15 @@ export const FALLBACK_PERSONAS: Persona[] = [
     role: "SYSTEM_ADMIN",
   },
   {
+    id: "usr-rec-08",
+    username: "receptionist",
+    full_name: "Tunde Olawale",
+    email: "tunde.olawale@clinova.internal",
+    role: "RECEPTIONIST",
+    facility_id: "FAC-DH-04",
+    facility_name: "Cuttack District Headquarters Hospital",
+  },
+  {
     id: "usr-patient-07",
     username: "patient",
     full_name: "Synthetic Patient Demo",

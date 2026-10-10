@@ -62,3 +62,4 @@ backend/storage/
 scratch/
 backups/
 .clinova/
+.reference_bundle/

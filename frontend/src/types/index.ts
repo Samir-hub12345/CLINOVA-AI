@@ -7,6 +7,7 @@
 export type ClinicalRole =
   | "CLINICIAN"
   | "NURSE"
+  | "RECEPTIONIST"
   | "PATIENT"
   | "REFERRAL_COORDINATOR"
   | "FACILITY_ADMIN"

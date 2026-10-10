@@ -67,6 +67,13 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role }) => {
       border: "#fde68a",
       icon: <UserCheck style={{ width: 12, height: 12 }} aria-hidden="true" />,
     },
+    RECEPTIONIST: {
+      label: "RECEPTIONIST",
+      bg: "#f5f3ff",
+      color: "#6d28d9",
+      border: "#ddd6fe",
+      icon: <UserCheck style={{ width: 12, height: 12 }} aria-hidden="true" />,
+    },
     REVIEWER: {
       label: "PEER REVIEWER",
       bg: "#faf5ff",

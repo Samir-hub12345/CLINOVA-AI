@@ -7,7 +7,13 @@ import {
   Building2,
   Stethoscope,
   UserCheck,
+  UserPlus,
   AlertOctagon,
+  Share2,
+  FileCheck2,
+  Lock,
+  Layers,
+  HeartPulse,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -17,7 +23,7 @@ export default function HomePage() {
       <section
         style={{
           textAlign: "center",
-          maxWidth: 920,
+          maxWidth: 960,
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
@@ -26,13 +32,11 @@ export default function HomePage() {
         }}
       >
         <div
-          className="clinova-badge"
+          className="badge badge-teal"
           style={{
-            backgroundColor: "var(--clinova-accent-light)",
-            color: "var(--clinova-accent-text)",
-            borderColor: "var(--clinova-accent-border)",
-            padding: "4px 12px",
-            fontSize: "0.75rem",
+            padding: "4px 14px",
+            fontSize: "var(--fs-xs)",
+            fontWeight: 600,
           }}
         >
           <Activity style={{ width: 14, height: 14 }} aria-hidden="true" />
@@ -41,23 +45,23 @@ export default function HomePage() {
 
         <h1
           style={{
-            fontSize: "2.75rem",
+            fontSize: "3rem",
             fontWeight: 800,
             lineHeight: 1.15,
-            color: "var(--clinova-text-primary)",
+            color: "var(--navy-900)",
             letterSpacing: "-0.03em",
           }}
         >
           From Isolated Triage to <br />
-          <span style={{ color: "var(--clinova-accent)" }}>Continuous Care Intelligence</span>
+          <span style={{ color: "var(--teal-600)" }}>Continuous Care Intelligence</span>
         </h1>
 
         <p
           style={{
             fontSize: "1.125rem",
-            color: "var(--clinova-text-secondary)",
+            color: "var(--text-2)",
             lineHeight: 1.6,
-            maxWidth: 780,
+            maxWidth: 820,
           }}
         >
           CLINOVA AI connects <strong>Patient Risk</strong>, <strong>Evidence Uncertainty</strong>,{" "}
@@ -66,7 +70,7 @@ export default function HomePage() {
           healthcare professionals strictly in control.
         </p>
 
-        {/* CTA Launch Buttons into 3 Core Workbenches */}
+        {/* Quick Launch Buttons into Key Operational Surfaces */}
         <div
           style={{
             display: "flex",
@@ -78,115 +82,162 @@ export default function HomePage() {
           }}
         >
           <Link
-            href="/staff/triage"
-            className="clinova-btn clinova-btn-primary clinova-btn-lg"
-            style={{ textDecoration: "none" }}
+            href="/staff/reception"
+            className="btn btn-primary btn-lg"
           >
-            <UserCheck style={{ width: 18, height: 18 }} aria-hidden="true" />
-            <span>Nurse Triage Workstation</span>
+            <UserPlus style={{ width: 18, height: 18 }} aria-hidden="true" />
+            <span>Reception Desk</span>
             <ArrowRight style={{ width: 16, height: 16 }} aria-hidden="true" />
           </Link>
 
           <Link
+            href="/staff/triage"
+            className="btn btn-secondary btn-lg"
+          >
+            <UserCheck style={{ width: 18, height: 18, color: "var(--warning)" }} aria-hidden="true" />
+            <span>Nurse Triage Workstation</span>
+          </Link>
+
+          <Link
             href="/staff/cases/CASE-SYNTH-003"
-            className="clinova-btn clinova-btn-secondary clinova-btn-lg"
-            style={{ textDecoration: "none" }}
+            className="btn btn-accent btn-lg"
           >
             <Stethoscope style={{ width: 18, height: 18 }} aria-hidden="true" />
-            <span>Doctor Reviewer Workbench</span>
+            <span>Doctor Workbench</span>
           </Link>
 
           <Link
             href="/patient/intake"
-            className="clinova-btn clinova-btn-outline clinova-btn-lg"
-            style={{ textDecoration: "none" }}
+            className="btn btn-ghost btn-lg"
+            style={{ border: "1px solid var(--border-strong)" }}
           >
-            <Activity style={{ width: 18, height: 18 }} aria-hidden="true" />
-            <span>Patient Intake Portal</span>
+            <Activity style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
+            <span>Patient Intake</span>
           </Link>
         </div>
       </section>
 
-      {/* 2. THREE APPROVED CORE WORKBENCHES SHOWCASE */}
+      {/* 2. SIX DISTINCT ROLE WORKSPACES SHOWCASE */}
       <section style={{ display: "flex", flexDirection: "column", gap: "var(--clinova-space-4)" }}>
         <div style={{ textAlign: "center" }}>
-          <span className="clinova-label">CORE OPERATIONAL INTERFACES</span>
-          <h2 style={{ fontSize: "1.75rem", marginTop: 4 }}>
-            Three Cohesive Clinical Workbenches
+          <span className="section-title">ROLE-BASED GOVERNANCE & ARCHITECTURE</span>
+          <h2 style={{ fontSize: "1.875rem", marginTop: 4, color: "var(--navy-900)" }}>
+            Six Distinct Role Experiences
           </h2>
-          <p style={{ fontSize: "0.875rem", color: "var(--clinova-text-muted)", marginTop: 2 }}>
-            Connected to a single unified CLINOVA Master Case data model.
+          <p style={{ fontSize: "0.875rem", color: "var(--text-3)", marginTop: 2 }}>
+            Strict role-based isolation, authentic access control, and specialized workflows for every member of the care continuum.
           </p>
         </div>
 
-        <div className="clinova-grid-3col">
-          {/* Workbench A: Patient Intake */}
+        <div className="grid grid-3 gap-4">
+          {/* Role 1: Patient */}
           <div
-            className="clinova-card"
+            className="card interactive"
             style={{
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              borderTop: "4px solid var(--clinova-accent)",
+              borderTop: "4px solid var(--teal-600)",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Activity style={{ width: 20, height: 20, color: "var(--clinova-accent)" }} aria-hidden="true" />
-                <h3 style={{ fontSize: "1.125rem" }}>Patient Intake Portal</h3>
+            <div className="card-body stack gap-2">
+              <div className="row between">
+                <div className="row gap-2">
+                  <Activity style={{ width: 20, height: 20, color: "var(--teal-600)" }} aria-hidden="true" />
+                  <h3 style={{ fontSize: "1.125rem", margin: 0 }}>A. Patient Portal</h3>
+                </div>
+                <span className="badge badge-teal">Patient</span>
               </div>
-              <p style={{ fontSize: "0.875rem", color: "var(--clinova-text-secondary)" }}>
-                Patient-facing structured demographic capture, multi-language speech transcription, adaptive questions to reduce epistemic gaps, and optional prescription uploads.
+              <p className="small subtle" style={{ margin: 0 }}>
+                Digital intake, multilingual vernacular entry (Odia/Hindi/English), personal case token status tracking, and doctor-approved care-plan instructions with mobile SMS previews.
               </p>
-              <ul style={{ paddingLeft: 18, fontSize: "0.8125rem", color: "var(--clinova-text-muted)", display: "flex", flexDirection: "column", gap: 4 }}>
+              <ul className="xs muted stack gap-1" style={{ paddingLeft: 16 }}>
                 <li>Informative digital consent & zero PII</li>
-                <li>Vernacular Odia, Hindi, and English</li>
-                <li>Adaptive uncertainty-reducing inquiries</li>
+                <li>Strict patient record boundary isolation</li>
+                <li>Follow-up appointments & medication guidance</li>
               </ul>
             </div>
-            <div style={{ marginTop: 16 }}>
-              <Link href="/patient/intake" className="clinova-btn clinova-btn-outline clinova-btn-sm" style={{ textDecoration: "none", width: "100%" }}>
-                <span>Launch Patient Portal</span>
-                <ArrowRight style={{ width: 12, height: 12 }} aria-hidden="true" />
+            <div className="card-footer">
+              <Link href="/patient" className="btn btn-secondary btn-sm btn-block">
+                <span>Access Patient Portal</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
               </Link>
             </div>
           </div>
 
-          {/* Workbench B: Nurse Triage */}
+          {/* Role 2: Receptionist */}
           <div
-            className="clinova-card"
+            className="card interactive"
             style={{
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              borderTop: "4px solid var(--clinova-warning)",
+              borderTop: "4px solid var(--navy-800)",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <UserCheck style={{ width: 20, height: 20, color: "var(--clinova-warning)" }} aria-hidden="true" />
-                <h3 style={{ fontSize: "1.125rem" }}>Nurse Triage Workstation</h3>
+            <div className="card-body stack gap-2">
+              <div className="row between">
+                <div className="row gap-2">
+                  <UserPlus style={{ width: 20, height: 20, color: "var(--navy-800)" }} aria-hidden="true" />
+                  <h3 style={{ fontSize: "1.125rem", margin: 0 }}>B. Receptionist Desk</h3>
+                </div>
+                <span className="badge badge-navy">Receptionist</span>
               </div>
-              <p style={{ fontSize: "0.875rem", color: "var(--clinova-text-secondary)" }}>
-                High-density operational triage worklist monitoring composite risk scores, waiting SLA targets, bedside vital sign acquisition, and red-flag acute shock alarms.
+              <p className="small subtle" style={{ margin: 0 }}>
+                Patient registration, identity demographic capture, DPDP Act 2023 consent recording, and staff-directed clinical pathway assignment (Regular OPD vs Emergency).
               </p>
-              <ul style={{ paddingLeft: 18, fontSize: "0.8125rem", color: "var(--clinova-text-muted)", display: "flex", flexDirection: "column", gap: 4 }}>
+              <ul className="xs muted stack gap-1" style={{ paddingLeft: 16 }}>
+                <li>Find or create patient records</li>
+                <li>Staff-assigned initial pathway routing</li>
+                <li>Zero autonomous medical diagnoses</li>
+              </ul>
+            </div>
+            <div className="card-footer">
+              <Link href="/staff/reception" className="btn btn-primary btn-sm btn-block">
+                <span>Access Reception Desk</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Role 3: Nurse */}
+          <div
+            className="card interactive"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              borderTop: "4px solid var(--warning)",
+            }}
+          >
+            <div className="card-body stack gap-2">
+              <div className="row between">
+                <div className="row gap-2">
+                  <UserCheck style={{ width: 20, height: 20, color: "var(--warning)" }} aria-hidden="true" />
+                  <h3 style={{ fontSize: "1.125rem", margin: 0 }}>C. Nurse Triage</h3>
+                </div>
+                <span className="badge badge-warning">Triage Nurse</span>
+              </div>
+              <p className="small subtle" style={{ margin: 0 }}>
+                Operational triage worklist monitoring composite risk scores, NEWS2 bedside vital sign acquisition, red-flag acute shock alarms, and SLA wait-time breach alerts.
+              </p>
+              <ul className="xs muted stack gap-1" style={{ paddingLeft: 16 }}>
                 <li>Color + icon multi-attribute acuity tags</li>
-                <li>Wait time SLA tracking & breach alerts</li>
+                <li>NEWS2 & Shock Index real-time compute</li>
                 <li>Emergency fast-track bay diversion</li>
               </ul>
             </div>
-            <div style={{ marginTop: 16 }}>
-              <Link href="/staff/triage" className="clinova-btn clinova-btn-outline clinova-btn-sm" style={{ textDecoration: "none", width: "100%" }}>
-                <span>Launch Nurse Queue</span>
-                <ArrowRight style={{ width: 12, height: 12 }} aria-hidden="true" />
+            <div className="card-footer">
+              <Link href="/staff/triage" className="btn btn-secondary btn-sm btn-block">
+                <span>Access Triage Workstation</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
               </Link>
             </div>
           </div>
 
-          {/* Workbench C: Doctor Reviewer */}
+          {/* Role 4: Clinician / Medical Officer */}
           <div
-            className="clinova-card"
+            className="card interactive"
             style={{
               display: "flex",
               flexDirection: "column",
@@ -194,80 +245,162 @@ export default function HomePage() {
               borderTop: "4px solid #0f766e",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Stethoscope style={{ width: 20, height: 20, color: "#0f766e" }} aria-hidden="true" />
-                <h3 style={{ fontSize: "1.125rem" }}>Doctor Reviewer Workbench</h3>
+            <div className="card-body stack gap-2">
+              <div className="row between">
+                <div className="row gap-2">
+                  <Stethoscope style={{ width: 20, height: 20, color: "#0f766e" }} aria-hidden="true" />
+                  <h3 style={{ fontSize: "1.125rem", margin: 0 }}>D. Doctor Workbench</h3>
+                </div>
+                <span className="badge badge-teal">Clinician / Doctor</span>
               </div>
-              <p style={{ fontSize: "0.875rem", color: "var(--clinova-text-secondary)" }}>
-                3-panel asymmetric workstation for definitive clinician review. Examines timeline evidence with provenance, inspects epistemic uncertainty, and executes clinical decisions.
+              <p className="small subtle" style={{ margin: 0 }}>
+                3-panel asymmetric workstation for definitive clinician review. Examines timeline evidence with provenance, epistemic uncertainty meters, conflict resolution, and authoritative sign-off.
               </p>
-              <ul style={{ paddingLeft: 18, fontSize: "0.8125rem", color: "var(--clinova-text-muted)", display: "flex", flexDirection: "column", gap: 4 }}>
-                <li>Full source provenance badges & audit trail</li>
-                <li>Epistemic gap & conflict highlight controls</li>
-                <li>Strict human-in-the-loop decision gate</li>
+              <ul className="xs muted stack gap-1" style={{ paddingLeft: 16 }}>
+                <li>Provenance badges & epistemic gap audit</li>
+                <li>Review queue with batch verification</li>
+                <li>Strict human clinician decision gate</li>
               </ul>
             </div>
-            <div style={{ marginTop: 16 }}>
-              <Link href="/staff/cases/CASE-SYNTH-003" className="clinova-btn clinova-btn-outline clinova-btn-sm" style={{ textDecoration: "none", width: "100%" }}>
-                <span>Launch Doctor Workbench</span>
-                <ArrowRight style={{ width: 12, height: 12 }} aria-hidden="true" />
+            <div className="card-footer">
+              <Link href="/staff/cases/CASE-SYNTH-003" className="btn btn-accent btn-sm btn-block">
+                <span>Access Doctor Workbench</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Role 5: Facility Administrator */}
+          <div
+            className="card interactive"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              borderTop: "4px solid var(--info)",
+            }}
+          >
+            <div className="card-body stack gap-2">
+              <div className="row between">
+                <div className="row gap-2">
+                  <Building2 style={{ width: 20, height: 20, color: "var(--info)" }} aria-hidden="true" />
+                  <h3 style={{ fontSize: "1.125rem", margin: 0 }}>E. Facility Admin</h3>
+                </div>
+                <span className="badge badge-info">Facility Admin</span>
+              </div>
+              <p className="small subtle" style={{ margin: 0 }}>
+                FacilityGraph resource management: bed occupancy, ICU ventilator capacity, oxygen telemetry, capability flags, and referral coordination with SBAR transfer packet dispatch.
+              </p>
+              <ul className="xs muted stack gap-1" style={{ paddingLeft: 16 }}>
+                <li>Regional receiving center telemetry</li>
+                <li>SBAR structured transfer coordination</li>
+                <li>Isolated to designated facility scope</li>
+              </ul>
+            </div>
+            <div className="card-footer">
+              <Link href="/facilities" className="btn btn-secondary btn-sm btn-block">
+                <span>Access Facility Operations</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Role 6: System Administrator */}
+          <div
+            className="card interactive"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              borderTop: "4px solid #475569",
+            }}
+          >
+            <div className="card-body stack gap-2">
+              <div className="row between">
+                <div className="row gap-2">
+                  <ShieldCheck style={{ width: 20, height: 20, color: "#475569" }} aria-hidden="true" />
+                  <h3 style={{ fontSize: "1.125rem", margin: 0 }}>F. System Admin</h3>
+                </div>
+                <span className="badge badge-navy">System Admin</span>
+              </div>
+              <p className="small subtle" style={{ margin: 0 }}>
+                Platform health monitoring, cryptographic SHA-256 chained security audit ledger, offline edge synchronization queue status, integration health, and compliance verification.
+              </p>
+              <ul className="xs muted stack gap-1" style={{ paddingLeft: 16 }}>
+                <li>Immutable security audit trail</li>
+                <li>Offline sync queue & conflict inspection</li>
+                <li>Zero clinical authority bypass</li>
+              </ul>
+            </div>
+            <div className="card-footer">
+              <Link href="/system" className="btn btn-secondary btn-sm btn-block">
+                <span>Access System Console</span>
+                <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. CENTRAL CLINICAL CARE INTELLIGENCE MODEL */}
+      {/* 3. CENTRAL CLINICAL CARE INTELLIGENCE MODEL (13-STAGE CONTINUOUS LOOP) */}
       <section
-        className="clinova-card"
+        className="card"
         style={{
-          backgroundColor: "var(--clinova-surface)",
           display: "flex",
           flexDirection: "column",
           gap: "var(--clinova-space-4)",
+          padding: "var(--clinova-space-6)",
         }}
       >
         <div>
-          <span className="clinova-label">THE MASTER CASE CONTINUOUS LOOP</span>
-          <h2 style={{ fontSize: "1.375rem", marginTop: 4 }}>
-            Evidence Grounding Before Clinical Action
+          <span className="section-title">THE 13-STAGE MASTER CASE CONTINUOUS LOOP</span>
+          <h2 style={{ fontSize: "1.5rem", marginTop: 4, color: "var(--navy-900)" }}>
+            Connected Clinical Care Journey
           </h2>
+          <p className="xs muted" style={{ marginTop: 2 }}>
+            Rigorous evidence grounding and deterministic safety checks before every clinical recommendation.
+          </p>
         </div>
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-            gap: 8,
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: 10,
             textAlign: "center",
           }}
         >
           {[
-            { step: "1. PATIENT", label: "Multimodal Intake" },
-            { step: "2. EVIDENCE", label: "Provenance Tags" },
-            { step: "3. TIMELINE", label: "Chronological Progression" },
-            { step: "4. GAPS", label: "Missing Info Audit" },
-            { step: "5. ADAPTIVE", label: "Targeted Questions" },
-            { step: "6. UNCERTAINTY", label: "Epistemic Score" },
-            { step: "7. REVIEW", label: "Clinician Authority" },
-            { step: "8. PATHWAY", label: "Safest Care Route" },
-            { step: "9. REFERRAL", label: "Facility Handoff" },
-            { step: "10. OUTCOME", label: "Continuous Quality" },
+            { step: "1. ENTRY", label: "Public / Portal Entry" },
+            { step: "2. CONSENT", label: "DPDP Act Digital Consent" },
+            { step: "3. PATHWAY", label: "Staff-Assigned Pathway" },
+            { step: "4. INTAKE", label: "Symptoms & Evidence" },
+            { step: "5. EXTRACTION", label: "Provenance & Uncertainty" },
+            { step: "6. TIMELINE", label: "Chronological Progression" },
+            { step: "7. ADAPTIVE", label: "Targeted Inquiries" },
+            { step: "8. CAREGRAPH", label: "Risk & Trajectory" },
+            { step: "9. SAFETY", label: "Deterministic Alarms" },
+            { step: "10. REVIEW", label: "Clinician Authority" },
+            { step: "11. FACILITY", label: "SBAR Referral" },
+            { step: "12. OUTCOME", label: "Outcome Capture" },
+            { step: "13. SIGNAL", label: "SignalGraph Telemetry" },
           ].map((item, idx) => (
             <div
-              key={idx}
+              key={item.step}
               style={{
-                border: "1px solid var(--clinova-border)",
-                borderRadius: "var(--clinova-radius-md)",
-                padding: "8px 4px",
-                backgroundColor: "var(--clinova-surface-subtle)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--r-md)",
+                padding: "10px 6px",
+                backgroundColor: "var(--surface-sunken)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
               }}
             >
-              <strong style={{ fontSize: "0.6875rem", color: "var(--clinova-accent-text)", display: "block" }}>
+              <strong style={{ fontSize: "0.6875rem", color: "var(--teal-700)" }}>
                 {item.step}
               </strong>
-              <span style={{ fontSize: "0.75rem", color: "var(--clinova-text-primary)", fontWeight: 600 }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--text)", fontWeight: 600 }}>
                 {item.label}
               </span>
             </div>
@@ -275,42 +408,42 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. GOVERNANCE & ARCHITECTURAL INVARIANTS */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "var(--clinova-space-4)",
-        }}
-      >
-        <div className="clinova-card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <ShieldCheck style={{ width: 18, height: 18, color: "var(--clinova-success)" }} aria-hidden="true" />
-            <h4 style={{ fontSize: "0.9375rem" }}>Zero-PII & Statutory Compliance</h4>
+      {/* 4. CLINICAL GOVERNANCE & STATUTORY PILLARS */}
+      <section className="grid grid-3 gap-4">
+        <div className="card">
+          <div className="card-body tight stack gap-2">
+            <div className="row gap-2">
+              <ShieldCheck style={{ width: 18, height: 18, color: "var(--success)" }} aria-hidden="true" />
+              <h4 style={{ fontSize: "0.9375rem", margin: 0 }}>Zero-PII & Statutory Compliance</h4>
+            </div>
+            <p className="xs subtle" style={{ margin: 0, lineHeight: 1.5 }}>
+              Full statutory alignment with India's DPDP Act 2023 and NMC RMP Regulations 2023. Zero personal health identifiers transmitted to commercial third-party APIs.
+            </p>
           </div>
-          <p style={{ fontSize: "0.8125rem", color: "var(--clinova-text-secondary)" }}>
-            Full statutory alignment with India&apos;s DPDP Act 2023 and NMC RMP Regulations 2023. Zero personal identifiers transmitted to public APIs.
-          </p>
         </div>
 
-        <div className="clinova-card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Building2 style={{ width: 18, height: 18, color: "var(--clinova-informational)" }} aria-hidden="true" />
-            <h4 style={{ fontSize: "0.9375rem" }}>₹0 Zero-Cost Production Stack</h4>
+        <div className="card">
+          <div className="card-body tight stack gap-2">
+            <div className="row gap-2">
+              <Building2 style={{ width: 18, height: 18, color: "var(--info)" }} aria-hidden="true" />
+              <h4 style={{ fontSize: "0.9375rem", margin: 0 }}>₹0 Zero-Cost Production Stack</h4>
+            </div>
+            <p className="xs subtle" style={{ margin: 0, lineHeight: 1.5 }}>
+              Engineered exclusively on self-hostable open technologies. Zero required paid API subscriptions for core clinical triage, vital risk scoring, or referral routing.
+            </p>
           </div>
-          <p style={{ fontSize: "0.8125rem", color: "var(--clinova-text-secondary)" }}>
-            Engineered exclusively on self-hostable open technologies. Zero required paid API subscriptions for core clinical triage, vital risk scoring, or referral routing.
-          </p>
         </div>
 
-        <div className="clinova-card" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <AlertOctagon style={{ width: 18, height: 18, color: "var(--clinova-emergency)" }} aria-hidden="true" />
-            <h4 style={{ fontSize: "0.9375rem" }}>Paschim Banga Doctrine</h4>
+        <div className="card">
+          <div className="card-body tight stack gap-2">
+            <div className="row gap-2">
+              <AlertOctagon style={{ width: 18, height: 18, color: "var(--error)" }} aria-hidden="true" />
+              <h4 style={{ fontSize: "0.9375rem", margin: 0 }}>Paschim Banga Doctrine</h4>
+            </div>
+            <p className="xs subtle" style={{ margin: 0, lineHeight: 1.5 }}>
+              Supreme Court constitutional emergency doctrine. Administrative delays or lacking paperwork must never prevent clinical resuscitation in life-threatening conditions.
+            </p>
           </div>
-          <p style={{ fontSize: "0.8125rem", color: "var(--clinova-text-secondary)" }}>
-            Supreme Court constitutional emergency doctrine. Administrative completion cannot delay clinical resuscitation in life-threatening presentations.
-          </p>
         </div>
       </section>
     </div>

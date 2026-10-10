@@ -28,7 +28,9 @@
 | **Phase 25** | Security Hardening, Cryptographic Auth & Sanitization | **COMPLETED** | `docs/implementation/PHASE_25_SECURITY_PRIVACY_HARDENING.md` |
 | **Phase 26** | Full Integration + End-to-End Verification | **COMPLETED** | `docs/implementation/PHASE_26_INTEGRATION_E2E_REPORT.md` |
 | **Phase 27** | Deployment Readiness & Automated Release Preparation | **VERIFIED** | `docs/implementation/PHASE_27_DEPLOYMENT_READINESS_REPORT.md` & `docs/deployment/DEPLOYMENT_GUIDE.md` |
-| **Phase 28** | **Live Deployment, Hosting Integration & GitHub Auto-Deploy** | **BLOCKED (Awaiting Operator)** | `docs/implementation/PHASE_28_LIVE_DEPLOYMENT_REPORT.md` |
+| **Phase 28** | **Live Deployment, Hosting Integration & GitHub Auto-Deploy** | **IN PROGRESS** | `docs/implementation/PHASE_28_LIVE_DEPLOYMENT_REPORT.md` |
+| ↳ **Phase 28A** | **Local–Vercel Parity Audit & Root-Cause Diagnosis** | **COMPLETED (Diagnosis)** | `docs/implementation/PHASE_28A_LOCAL_VERCEL_PARITY_AUDIT.md` |
+| ↳ **Phase 28B** | Production Alignment, Design Harmonization & Live Deployment | PLANNED (Awaiting Review) | Next Action following Operator Approval |
 
 ---
 
@@ -177,5 +179,12 @@ Phase 28 execution and verification has been conducted across all pre-deployment
   - Frontend: `tsc --noEmit` (0 errors), `next lint` (0 errors), `test:offline` (6/6 passed), `next build` (15 routes compiled in 2.9s, 103 kB shared JS).
   - Backend: `pytest backend/tests/test_foundation.py` (9/9 passed in 1.29s). Liveness (`/health/live`), readiness (`/health/ready` with 200/503 non-leaking ping), settings validation (32+ char secret key, no legacy bypasses), dialect adaptation, and Alembic head revision (`b84f3782910c`) verified.
 - **Operator Runbook:** Detailed 5-step operational runbook authored in `docs/implementation/PHASE_28_LIVE_DEPLOYMENT_REPORT.md` enabling the operator to securely connect services, set secrets outside chat, and launch live public endpoints.
-- **Current Phase 28 Status:** **BLOCKED AT OPERATOR ACCESS BOUNDARY & REPOSITORY IDENTITY GATE**. In accordance with Phase 28 Section 11, status is explicitly marked blocked rather than falsely claiming production completion.
+- **Current Phase 28 Status:** **IN PROGRESS (Phase 28A Complete, Phase 28B Pending Operator Action)**. Local quality gates (100% passed) and root-cause parity audit completed.
+
+### Phase 28A: Local–Vercel Parity Audit & Root-Cause Diagnosis (COMPLETED)
+- **Source Desynchronization**: Confirmed that the Vercel deployment is frozen on legacy commit `abbf81a` / `1debab4` (Sept 25, 2026), 16+ commits behind local `master` (`6e2b88a`).
+- **Landing Page Flicker Root Cause**: Isolated to `useConnectivity()` polling `${API_BASE_URL}/api/v1/ping` every 5s on the legacy client, failing against the absent backend and cycling hysteresis state, causing `<AdaptiveImage />` to unmount and remount with layout thrashing. Local `master` replaces this with a static React Server Component with zero flicker.
+- **Identical Dashboards Root Cause**: In commit `abbf81a`, nurse and doctor routes literally imported and rendered the exact same `<ClinicianDashboard />`. Local `master` features completely separated workspaces (`/staff/triage` for nurse acuity and `/staff/review` + `/staff/cases/[caseId]` for attending physician workbench) backed by server-side RBAC.
+- **Visual vs Functional Gap**: Vercel used Tailwind CSS utility classes and external Unsplash photography; local `master` stripped Tailwind in `558c9a2` for zero-warning native CSS tokens and inline styles, trading decorative styling for 15 functionally complete App Router workflows.
+- **Comprehensive Audit Artifact**: Published [`docs/implementation/PHASE_28A_LOCAL_VERCEL_PARITY_AUDIT.md`](file:///c:/Users/admin/CLINOVA-AI/docs/implementation/PHASE_28A_LOCAL_VERCEL_PARITY_AUDIT.md).
 

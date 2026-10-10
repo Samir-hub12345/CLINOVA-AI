@@ -13,21 +13,22 @@ export default function PatientLandingPage() {
       />
 
       <div
-        className="clinova-card"
+        className="card"
         style={{
-          borderLeft: "6px solid var(--clinova-accent)",
+          borderLeft: "6px solid var(--teal-600)",
           display: "flex",
           flexDirection: "column",
           gap: 12,
+          padding: "var(--s-6)",
         }}
       >
-        <h3 style={{ fontSize: "1.25rem" }}>Register for Consultation</h3>
-        <p style={{ fontSize: "0.9375rem", color: "var(--clinova-text-secondary)", lineHeight: 1.6 }}>
+        <h3 style={{ fontSize: "1.25rem", margin: 0 }}>Register for Clinical Consultation</h3>
+        <p style={{ fontSize: "0.9375rem", color: "var(--text-2)", lineHeight: 1.6, margin: 0 }}>
           Complete a quick digital intake before seeing your doctor. Your information will be summarized directly on the clinical workstation for the examining doctor and triage nurse.
         </p>
 
         <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-          <Link href="/patient/intake" className="clinova-btn clinova-btn-primary clinova-btn-lg" style={{ textDecoration: "none" }}>
+          <Link href="/patient/intake" className="btn btn-primary btn-lg" style={{ textDecoration: "none" }}>
             <Activity style={{ width: 16, height: 16 }} aria-hidden="true" />
             <span>Begin Patient Intake</span>
             <ArrowRight style={{ width: 16, height: 16 }} aria-hidden="true" />
@@ -68,21 +69,23 @@ export default function PatientLandingPage() {
       </div>
 
       {/* Synthetic Demonstration Quick Track */}
-      <div className="clinova-card" style={{ backgroundColor: "var(--clinova-surface-subtle)" }}>
-        <span className="clinova-label">SYNTHETIC DEMONSTRATION CASES</span>
-        <h4 style={{ fontSize: "0.9375rem", margin: "4px 0 8px" }}>
-          Track Existing Demonstration Patient Tokens
-        </h4>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          <Link href="/patient/case/CASE-SYNTH-001" className="clinova-btn clinova-btn-secondary clinova-btn-sm" style={{ textDecoration: "none" }}>
-            Track PT-SYN-0014 (Routine URI)
-          </Link>
-          <Link href="/patient/case/CASE-SYNTH-003" className="clinova-btn clinova-btn-secondary clinova-btn-sm" style={{ textDecoration: "none" }}>
-            Track PT-SYN-0842 (Critical Chest Pain)
-          </Link>
-          <Link href="/patient/case/CASE-SYNTH-004" className="clinova-btn clinova-btn-secondary clinova-btn-sm" style={{ textDecoration: "none" }}>
-            Track PT-SYN-0319 (Urgent Febrile)
-          </Link>
+      <div className="card" style={{ backgroundColor: "var(--surface-sunken)" }}>
+        <div className="card-body tight stack gap-2">
+          <span className="section-title">SYNTHETIC DEMONSTRATION CASES</span>
+          <h4 style={{ fontSize: "0.9375rem", margin: "2px 0 6px" }}>
+            Track Existing Demonstration Patient Tokens
+          </h4>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <Link href="/patient/case/CASE-SYNTH-001" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
+              Track PT-SYN-0014 (Routine URI)
+            </Link>
+            <Link href="/patient/case/CASE-SYNTH-003" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
+              Track PT-SYN-0842 (Critical Chest Pain)
+            </Link>
+            <Link href="/patient/case/CASE-SYNTH-004" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
+              Track PT-SYN-0319 (Urgent Febrile)
+            </Link>
+          </div>
         </div>
       </div>
     </div>
