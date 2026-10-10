@@ -12,6 +12,7 @@ import re
 import uuid
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timezone
+from app.domain.triage.negation import has_positive_finding, is_phrase_negated
 
 
 # Clinical translation dictionary for regional Indian languages
@@ -100,56 +101,85 @@ def scrub_pii(raw_text: str, reported_name: Optional[str] = None, reported_age: 
 
 
 def parse_clinical_narrative(text: str) -> Dict[str, Any]:
-    """Extracts suspected clinical syndrome, symptoms, and potential red flags."""
+    """Extracts suspected clinical syndrome, symptoms, and potential red flags with negation awareness."""
     lower = text.lower()
     symptoms = []
     red_flags = []
     syndrome = "GENERAL_ROUTINE"
     required_bundle = "BUNDLE_ROUTINE_AMBULATORY"
 
-    # Red flag checks
-    if any(k in lower for k in ["chest pain", "crushing chest pain", "severe chest pain", "jaw pain", "st elevation", "sweating", "angina"]):
+    # 1. Cardiac / Acute Coronary Syndrome
+    if has_positive_finding(lower, ["chest pain", "crushing chest pain", "severe chest pain", "retrosternal", "jaw pain", "st elevation", "sweating", "angina"]):
         symptoms.append("severe_chest_pain")
         syndrome = "CHEST_PAIN"
         required_bundle = "BUNDLE_STEMI_CARDIAC"
-        if "hypotension" in lower or "bp 70" in lower or "bp 80" in lower:
+        if has_positive_finding(lower, ["hypotension", "bp 70", "bp 80"]):
             red_flags.append("HYPOTENSIVE_SHOCK")
 
-    if any(k in lower for k in ["shortness of breath", "dyspnea", "wheezing", "stridor", "gasping", "difficulty breathing", "breathing difficulty"]):
+    # 2. Acute Respiratory / Airway
+    if has_positive_finding(lower, ["shortness of breath", "dyspnea", "wheezing", "stridor", "gasping", "difficulty breathing", "breathing difficulty", "respiratory distress"]):
         symptoms.append("shortness_of_breath")
-        syndrome = "ACUTE_RESPIRATORY"
-        required_bundle = "BUNDLE_SEPSIS_SEVERE"
-        if "stridor" in lower or "severe respiratory distress" in lower:
+        # Do not override cardiac emergency if chest pain was also confirmed
+        if syndrome != "CHEST_PAIN":
+            syndrome = "ACUTE_RESPIRATORY"
+            required_bundle = "BUNDLE_SEPSIS_SEVERE"
+        if has_positive_finding(lower, ["stridor", "severe respiratory distress", "choking", "airway compromise"]):
             red_flags.append("STRIDOR")
 
-    if any(k in lower for k in ["high fever", "petechiae", "dengue", "chills", "bleeding"]):
+    # 3. Acute Hemorrhagic Fever / Dengue
+    if has_positive_finding(lower, ["high fever", "petechiae", "dengue", "chills"]):
         symptoms.append("high_fever")
-        syndrome = "FEVER_HEMORRHAGIC"
-        if "bleeding" in lower or "platelet" in lower:
+        if syndrome == "GENERAL_ROUTINE":
+            syndrome = "FEVER_HEMORRHAGIC"
+        if has_positive_finding(lower, ["bleeding", "platelet"]):
             required_bundle = "BUNDLE_SEPSIS_SEVERE"
             red_flags.append("MASSIVE_BLEEDING")
 
-    if any(k in lower for k in ["polytrauma", "accident", "fracture", "massive bleeding", "head injury"]):
+    # 4. Polytrauma / Major Injury
+    if has_positive_finding(lower, ["polytrauma", "accident", "fracture", "massive bleeding", "head injury", "active hemorrhage"]):
         symptoms.append("trauma")
-        syndrome = "TRAUMA"
-        required_bundle = "BUNDLE_TRAUMA_CRITICAL"
-        red_flags.append("MASSIVE_BLEEDING")
+        if syndrome == "GENERAL_ROUTINE":
+            syndrome = "TRAUMA"
+            required_bundle = "BUNDLE_TRAUMA_CRITICAL"
+        if has_positive_finding(lower, ["massive bleeding", "active hemorrhage", "arterial bleeding"]):
+            red_flags.append("MASSIVE_BLEEDING")
 
-    if any(k in lower for k in ["facial droop", "slurred speech", "hemiparesis", "stroke", "arm weakness"]):
+    # 5. Acute Stroke / Neurological Deficit
+    if has_positive_finding(lower, ["facial droop", "slurred speech", "hemiparesis", "stroke", "arm weakness"]):
         symptoms.append("acute_neurological_deficit")
-        syndrome = "STROKE_ACUTE"
-        required_bundle = "BUNDLE_STROKE_ACUTE"
+        if syndrome == "GENERAL_ROUTINE":
+            syndrome = "STROKE_ACUTE"
+            required_bundle = "BUNDLE_STROKE_ACUTE"
 
-    if any(k in lower for k in ["snake bite", "snakebite", "fang marks", "swelling"]):
+    # 6. Snakebite Envenomation
+    if has_positive_finding(lower, ["snake bite", "snakebite", "fang marks"]):
         symptoms.append("snakebite_envenomation")
-        syndrome = "TRAUMA"
-        required_bundle = "BUNDLE_SNAKEBITE_ENVENOMATION"
+        if syndrome == "GENERAL_ROUTINE":
+            syndrome = "TRAUMA"
+            required_bundle = "BUNDLE_SNAKEBITE_ENVENOMATION"
 
-    if any(k in lower for k in ["postpartum", "obstetric hemorrhage", "bleeding after delivery"]):
+    # 7. Postpartum / Obstetric Hemorrhage
+    if has_positive_finding(lower, ["postpartum", "obstetric hemorrhage", "bleeding after delivery"]):
         symptoms.append("obstetric_hemorrhage")
-        syndrome = "TRAUMA"
-        required_bundle = "BUNDLE_OBSTETRIC_HEMORRHAGE"
-        red_flags.append("MASSIVE_BLEEDING")
+        if syndrome == "GENERAL_ROUTINE":
+            syndrome = "TRAUMA"
+            required_bundle = "BUNDLE_OBSTETRIC_HEMORRHAGE"
+            red_flags.append("MASSIVE_BLEEDING")
+
+    # 8. Routine ambulatory findings (fever, cough, body ache, allergy, rash)
+    if not symptoms:
+        if has_positive_finding(lower, ["fever", "low grade fever", "mild fever"]):
+            symptoms.append("fever")
+        if has_positive_finding(lower, ["cough", "mild cough"]):
+            symptoms.append("cough")
+        if has_positive_finding(lower, ["body ache", "body pain", "fatigue", "weakness"]):
+            symptoms.append("body_ache")
+        if has_positive_finding(lower, ["allergy", "rash", "urticaria", "itchy", "sneezing"]):
+            symptoms.append("rash_or_allergy")
+        if has_positive_finding(lower, ["headache"]):
+            symptoms.append("headache")
+        if has_positive_finding(lower, ["abdominal pain", "nausea", "vomiting"]):
+            symptoms.append("abdominal_discomfort")
 
     return {
         "primary_syndrome": syndrome,

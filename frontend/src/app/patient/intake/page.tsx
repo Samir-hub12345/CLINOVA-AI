@@ -7,7 +7,7 @@ export default function PatientIntakePage() {
     <div>
       <PageHeader
         title="Patient Intake Portal"
-        subtitle="Step-by-step clinical registration, language selection, adaptive inquiries, and optional report upload"
+        subtitle="Step-by-step clinical registration, multimodal input, adaptive inquiries, and optional report upload"
         breadcrumbs={[
           { label: "Home", href: "/" },
           { label: "Patient", href: "/patient" },

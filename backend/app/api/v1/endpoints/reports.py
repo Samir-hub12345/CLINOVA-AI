@@ -5,6 +5,7 @@ with strict role authorization, patient self-scope isolation,
 and clear separation of AI inference from human clinician verification (DOC-09, DOC-14).
 """
 
+import hashlib
 from fastapi import APIRouter, Depends, HTTPException, Response
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
@@ -113,11 +114,11 @@ async def assemble_case_report_payload(case_id: str, db: AsyncSession, actor: Ac
     evidence_list = []
     for ev in (case.evidence_records or []):
         evidence_list.append({
-            "entity_type": ev.evidence_type,
-            "entity_value": ev.evidence_value,
-            "confidence": ev.confidence,
-            "source": ev.source,
-            "verification_status": ev.verification_status,
+            "entity_type": getattr(ev, "evidence_type", getattr(ev, "provenance_type", "CLINICAL_EVIDENCE")),
+            "entity_value": getattr(ev, "evidence_value", getattr(ev, "extracted_payload", {})),
+            "confidence": getattr(ev, "confidence", getattr(ev, "confidence_score", 1.0)),
+            "source": getattr(ev, "source", getattr(ev, "provenance_type", "PATIENT_REPORTED")),
+            "verification_status": getattr(ev, "verification_status", "UNVERIFIED"),
         })
 
     # 6. Clinician Decisions
@@ -220,6 +221,8 @@ async def assemble_case_report_payload(case_id: str, db: AsyncSession, actor: Ac
 
 @router.get("/cases/{case_id}/report", tags=["Clinical Reports"])
 @router.get("/cases/{case_id}/report/summary", tags=["Clinical Reports"])
+@router.get("/reports/{case_id}", tags=["Clinical Reports"])
+@router.get("/reports/{case_id}/summary", tags=["Clinical Reports"])
 async def get_clinical_case_report_summary(
     case_id: str,
     db: AsyncSession = Depends(get_db),
@@ -230,6 +233,7 @@ async def get_clinical_case_report_summary(
 
 
 @router.get("/cases/{case_id}/report/pdf", tags=["Clinical Reports"])
+@router.get("/reports/{case_id}/pdf", tags=["Clinical Reports"])
 async def download_clinical_case_report_pdf(
     case_id: str,
     db: AsyncSession = Depends(get_db),
@@ -241,6 +245,7 @@ async def download_clinical_case_report_pdf(
     """
     report_data = await assemble_case_report_payload(case_id, db, actor)
     pdf_bytes = build_clinical_report_pdf(report_data)
+    pdf_sha256 = hashlib.sha256(pdf_bytes).hexdigest()
 
     clean_filename = f"clinova_report_{case_id}.pdf"
     return Response(
@@ -250,5 +255,6 @@ async def download_clinical_case_report_pdf(
             "Content-Disposition": f'attachment; filename="{clean_filename}"',
             "Content-Type": "application/pdf",
             "Cache-Control": "no-store, no-cache, must-revalidate",
+            "X-Report-SHA256": pdf_sha256,
         },
     )

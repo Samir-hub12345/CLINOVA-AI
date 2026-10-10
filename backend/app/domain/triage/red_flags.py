@@ -12,6 +12,7 @@ Core Principles:
 
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
+from app.domain.triage.negation import has_positive_finding
 
 RED_FLAGS_VERSION = "REDFLAGS-CLINOVA-v1.0"
 
@@ -150,7 +151,7 @@ def evaluate_deterministic_red_flags(
     })
 
     # 7. RF-CLINICAL-AIRWAY (Critical)
-    rf_airway_triggered = any(k in all_text for k in ["stridor", "airway compromise", "choking", "laryngeal edema", "foreign body aspiration"])
+    rf_airway_triggered = has_positive_finding(all_text, ["stridor", "airway compromise", "choking", "laryngeal edema", "foreign body aspiration"])
     results.append({
         "rule_id": "RF-CLINICAL-AIRWAY",
         "rule_version": RED_FLAGS_VERSION,
@@ -164,7 +165,7 @@ def evaluate_deterministic_red_flags(
     })
 
     # 8. RF-CLINICAL-MASSIVE-BLEEDING (Critical)
-    rf_bleeding_triggered = any(k in all_text for k in ["massive bleeding", "postpartum hemorrhage", "arterial bleeding", "exsanguinating", "severe bleeding", "active hemorrhage"])
+    rf_bleeding_triggered = has_positive_finding(all_text, ["massive bleeding", "postpartum hemorrhage", "arterial bleeding", "exsanguinating", "severe bleeding", "active hemorrhage"])
     results.append({
         "rule_id": "RF-CLINICAL-MASSIVE-BLEEDING",
         "rule_version": RED_FLAGS_VERSION,

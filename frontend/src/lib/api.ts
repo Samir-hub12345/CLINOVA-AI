@@ -422,6 +422,29 @@ export interface IntakeResult {
   queue_position: number;
   message: string;
   is_mock: boolean;
+  case_number?: string;
+  patient_id?: string;
+  patient_synthetic_id?: string;
+  encounter_id?: string;
+  facility_id?: string;
+  pathway?: string;
+  status?: string;
+  current_state?: string;
+  state_version?: number;
+  consent_status?: string;
+  consent_id?: string;
+  is_duplicate?: boolean;
+  primary_syndrome?: string;
+  required_bundle?: string;
+  summary?: string;
+  extracted_entities?: Array<{ name: string; type: string; source: string; provenance: string }>;
+  uncertainty_score?: number;
+  missing_parameters?: string[];
+  follow_up_questions?: Array<{ id?: string; parameter?: string; question: string; reason?: string; priority?: string; status?: string }>;
+  conflicts?: Array<{ type: string; message: string }>;
+  safety_escalated?: boolean;
+  red_flags?: Array<{ rule_id: string; name: string; severity: string; triggered: boolean; explanation: string }>;
+  parameter_audit?: Array<{ parameter: string; state: string; reason: string }>;
 }
 
 export async function submitPatientIntake(
@@ -473,6 +496,81 @@ export async function submitPatientIntake(
       message: "Network offline. Patient intake saved locally and queued for synchronization upon reconnection.",
       is_mock: true,
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 2a. Pathway Transition & Emergency Handoff
+// ---------------------------------------------------------------------------
+
+export interface PathwayChangeResponse {
+  success: boolean;
+  case_id: string;
+  encounter_id: string;
+  pathway: string;
+  acuity_tier: string;
+  status: string;
+  current_state: string;
+  message: string;
+}
+
+export async function changeCasePathway(
+  caseId: string,
+  pathway: string,
+  reason?: string
+): Promise<PathwayChangeResponse> {
+  return await safeFetch<PathwayChangeResponse>(`/cases/${caseId}/pathway`, {
+    method: "PATCH",
+    body: JSON.stringify({ pathway, reason }),
+  });
+}
+
+export interface EmergencyHandoffResponse {
+  success: boolean;
+  case_id: string;
+  destination_unit: string;
+  receiving_team: string;
+  handoff_status: string;
+  status: string;
+  current_state: string;
+  recorded_at: string;
+  message: string;
+}
+
+export async function recordEmergencyHandoff(
+  caseId: string,
+  destination_unit: string,
+  receiving_team: string,
+  notes?: string,
+  handoff_status: string = "ACCEPTED"
+): Promise<EmergencyHandoffResponse> {
+  return await safeFetch<EmergencyHandoffResponse>(`/cases/${caseId}/handoff`, {
+    method: "POST",
+    body: JSON.stringify({ destination_unit, receiving_team, notes, handoff_status }),
+  });
+}
+
+export async function answerFollowUpQuestion(
+  caseId: string,
+  questionId: string,
+  answerText: string
+): Promise<{ success: boolean; answer_id: string; message: string }> {
+  try {
+    return await safeFetch<{ success: boolean; answer_id: string; message: string }>(
+      `/cases/${caseId}/follow-up/answer`,
+      {
+        method: "POST",
+        body: JSON.stringify({ question_id: questionId, answer_text: answerText }),
+      }
+    );
+  } catch {
+    return await safeFetch<{ success: boolean; answer_id: string; message: string }>(
+      `/cases/${caseId}/questions/answer`,
+      {
+        method: "POST",
+        body: JSON.stringify({ question_id: questionId, answer_text: answerText }),
+      }
+    );
   }
 }
 

@@ -270,6 +270,39 @@ def evaluate_uncertainty_and_gaps(
                 "message": f"Patient reported feeling normal/asymptomatic, but SpO2 is dangerously low ({spo2}%)."
             })
 
+    # Structured Protocol Parameter Audit (Epistemic States: KNOWN, UNKNOWN, CONFLICTING, UNRELIABLE, VERIFIED)
+    conflict_param_names = set()
+    for c in conflicts:
+        if c.get("type") == "FEVER_CONTRADICTION":
+            conflict_param_names.add("temperature_celsius")
+        elif c.get("type") == "SILENT_HYPOXIA_CONTRADICTION":
+            conflict_param_names.add("spo2_percent")
+
+    parameter_audit = []
+    for param in protocol_params:
+        if param in conflict_param_names:
+            state = "CONFLICTING"
+            reason = "Contradiction detected between patient subjective claim and objective sensor measurement."
+        elif param in present_params:
+            if v_clinician > 0.5:
+                state = "VERIFIED"
+                reason = "Clinician physical observation or confirmed reading."
+            elif q_evidence < 0.70:
+                state = "UNRELIABLE"
+                reason = "Measurement or input confidence below reliable clinical quality threshold."
+            else:
+                state = "KNOWN"
+                reason = "Captured and recorded from patient narrative or physiological sensor."
+        else:
+            state = "UNKNOWN"
+            reason = "Missing protocol parameter awaiting triage staff observation or doctor verification. Strictly NOT a negative clinical finding."
+
+        parameter_audit.append({
+            "parameter": param,
+            "state": state,
+            "reason": reason,
+        })
+
     return {
         "uncertainty_score": u_t,
         "protocol_completeness": round(c_data, 2),
@@ -278,6 +311,7 @@ def evaluate_uncertainty_and_gaps(
         "missing_parameters": missing_params,
         "follow_up_questions": questions,
         "conflicts": conflicts,
+        "parameter_audit": parameter_audit,
     }
 
 

@@ -205,6 +205,9 @@ export interface CareGraphData {
     primary_syndrome?: string;
     required_bundle?: string;
     emergency_active?: boolean;
+    pathway?: string;
+    encounter_id?: string;
+    facility_id?: string;
   };
   trajectory: {
     slope: number;

@@ -24,7 +24,9 @@ from app.db.models import (
     ClinicianDecision,
     AuditLog,
     Facility,
+    TimelineEvent,
 )
+from app.domain.triage.red_flags import evaluate_deterministic_red_flags
 from app.domain.caregraph.engine import (
     calculate_risk_score,
     calculate_trajectory_slope,
@@ -150,7 +152,37 @@ async def get_case_caregraph(
         "presenting_complaint": case.presenting_complaint,
         "primary_syndrome": case.primary_syndrome,
         "required_bundle": case.required_bundle,
+        "pathway": case.pathway,
+        "emergency_active": bool(case.pathway == "EMERGENCY" or case.acuity_tier == "CRITICAL"),
+        "encounter_id": case.encounter_id,
+        "facility_id": case.facility_id,
     }
+
+    # Longitudinal timeline events
+    tl_stmt = select(TimelineEvent).where(TimelineEvent.case_id == case_id).order_by(TimelineEvent.event_timestamp)
+    tl_records = (await db.execute(tl_stmt)).scalars().all()
+    timeline_list = [
+        {
+            "id": tl.id,
+            "event_type": tl.event_type,
+            "event_title": tl.event_title,
+            "event_content": tl.event_content,
+            "event_timestamp": tl.event_timestamp.isoformat() if tl.event_timestamp else None,
+            "source_timestamp": tl.source_timestamp.isoformat() if tl.source_timestamp else None,
+            "actor_role": tl.actor_role,
+            "is_conflict": tl.is_conflict,
+            "provenance_metadata": tl.provenance_metadata,
+        }
+        for tl in tl_records
+    ]
+
+    # Deterministic red-flag evaluation
+    red_flags = evaluate_deterministic_red_flags(
+        vitals=latest_vitals,
+        shock_index=None,
+        presenting_complaint=case.presenting_complaint or "",
+        extracted_symptoms=[],
+    )
 
     outcome_dict = None
     if case.outcome:
@@ -190,6 +222,8 @@ async def get_case_caregraph(
         "evidence_records": ev_records,
         "vitals_history": vitals_history,
         "outcome": outcome_dict,
+        "timeline": timeline_list,
+        "red_flags": red_flags,
     }
 
 

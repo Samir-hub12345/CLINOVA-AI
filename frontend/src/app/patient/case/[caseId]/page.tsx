@@ -81,6 +81,39 @@ export default async function PatientCasePage({ params }: PageProps) {
         </div>
       </div>
 
+      {/* Pathway & Clinical Classification */}
+      <div className="card">
+        <div className="card-body tight stack gap-2">
+          <div className="row between">
+            <span className="section-title">Clinical Care Classification</span>
+            <span
+              className="badge"
+              style={{
+                backgroundColor: caseData.case.emergency_active || caseData.case.pathway === "EMERGENCY" ? "#fee2e2" : "#ecfdf5",
+                color: caseData.case.emergency_active || caseData.case.pathway === "EMERGENCY" ? "#991b1b" : "#065f46",
+                fontWeight: 600,
+              }}
+            >
+              PATHWAY: {caseData.case.pathway || (caseData.case.emergency_active ? "EMERGENCY" : "OPD_GENERAL")}
+            </span>
+          </div>
+          <div className="row gap-3" style={{ flexWrap: "wrap", marginTop: 4 }}>
+            <div>
+              <span className="xs muted" style={{ display: "block" }}>Primary Syndrome</span>
+              <strong className="xs strong">{caseData.case.primary_syndrome || "GENERAL_ROUTINE"}</strong>
+            </div>
+            <div>
+              <span className="xs muted" style={{ display: "block" }}>Protocol Care Bundle</span>
+              <strong className="xs strong">{caseData.case.required_bundle || "BUNDLE_ROUTINE_AMBULATORY"}</strong>
+            </div>
+            <div>
+              <span className="xs muted" style={{ display: "block" }}>Clinical Acuity</span>
+              <strong className="xs strong">{caseData.case.acuity_tier || "ROUTINE"}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Approved Patient Instructions & Care Plan (Reference Feature) */}
       <div className="card">
         <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>

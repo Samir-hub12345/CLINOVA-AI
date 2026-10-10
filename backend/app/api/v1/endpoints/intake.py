@@ -35,9 +35,11 @@ from app.db.models import (
     Facility,
     User,
     TriageSnapshotRecord,
+    FollowUpQuestion,
     utc_now,
 )
 from app.domain.triage import compute_deterministic_triage
+from app.domain.triage.red_flags import evaluate_deterministic_red_flags
 from app.core.config import settings
 from app.core.auth import get_current_actor, ActorContext
 from app.core.rbac import Permission, check_role_permission
@@ -405,6 +407,56 @@ async def submit_frontend_intake(
     # 3. Pathway Validation & Normalization
     canonical_pathway = normalize_pathway(req.pathway)
 
+    # 3b. Multimodal Narrative Extraction & Deterministic Red-Flag Safety Evaluation
+    narrative_full = f"{complaint_clean} {req.narrative_notes or ''} {req.voice_transcript or ''}".strip()
+    extracted_info = parse_clinical_narrative(narrative_full)
+    primary_syndrome = extracted_info.get("primary_syndrome", "GENERAL_ROUTINE")
+    required_bundle = extracted_info.get("required_bundle", "BUNDLE_ROUTINE_AMBULATORY")
+    extracted_symptoms = extracted_info.get("extracted_symptoms", [])
+
+    eval_red_flags = evaluate_deterministic_red_flags(
+        vitals=req.vitals or {},
+        shock_index=None,
+        presenting_complaint=narrative_full,
+        extracted_symptoms=extracted_symptoms,
+    )
+    # Combine any critical red flags detected from narrative extractor (e.g. STRIDOR, MASSIVE_BLEEDING)
+    for ext_rf in extracted_info.get("red_flags", []):
+        if ext_rf == "STRIDOR" and not any(r["rule_id"] == "RF-CLINICAL-AIRWAY" and r["triggered"] for r in eval_red_flags):
+            eval_red_flags.append({
+                "rule_id": "RF-CLINICAL-AIRWAY",
+                "rule_version": "REDFLAGS-CLINOVA-v1.0",
+                "name": "Upper Airway Compromise / Stridor",
+                "severity": "CRITICAL",
+                "triggered": True,
+                "explanation": "Narrative extraction confirmed active stridor or airway obstruction.",
+                "observed_inputs": {"narrative": narrative_full},
+                "vital_references": [],
+                "timestamp": utc_now(),
+            })
+        elif ext_rf == "MASSIVE_BLEEDING" and not any(r["rule_id"] == "RF-CLINICAL-MASSIVE-BLEEDING" and r["triggered"] for r in eval_red_flags):
+            eval_red_flags.append({
+                "rule_id": "RF-CLINICAL-MASSIVE-BLEEDING",
+                "rule_version": "REDFLAGS-CLINOVA-v1.0",
+                "name": "Active Massive Hemorrhage",
+                "severity": "CRITICAL",
+                "triggered": True,
+                "explanation": "Narrative extraction confirmed active massive hemorrhage.",
+                "observed_inputs": {"narrative": narrative_full},
+                "vital_references": [],
+                "timestamp": utc_now(),
+            })
+
+    has_critical_signals = any(rf.get("triggered") and rf.get("severity") == "CRITICAL" for rf in eval_red_flags)
+    safety_escalated = False
+
+    if has_critical_signals:
+        safety_escalated = True
+        canonical_pathway = "EMERGENCY"
+    elif actor.is_patient() and canonical_pathway == "EMERGENCY":
+        # Patients cannot unilaterally assign EMERGENCY pathway without staff authorization or critical red flags
+        canonical_pathway = "OPD_GENERAL"
+
     # 4. Facility Resolution & Scope
     fac = await db.get(Facility, req.facility_id)
     if not fac:
@@ -491,6 +543,17 @@ async def submit_frontend_intake(
                     message="Duplicate submission detected. Returned existing case reference.",
                     is_mock=False,
                     is_duplicate=True,
+                    primary_syndrome=existing_case.primary_syndrome,
+                    required_bundle=existing_case.required_bundle,
+                    summary=f"Duplicate submission detected for case {existing_case.case_number}.",
+                    extracted_entities=[{"name": existing_case.primary_syndrome or "complaint", "type": "SYMPTOM", "source": "PATIENT_REPORTED", "provenance": "NARRATIVE"}],
+                    uncertainty_score=existing_case.uncertainty_score,
+                    missing_parameters=[],
+                    parameter_audit=[],
+                    follow_up_questions=[],
+                    conflicts=[],
+                    safety_escalated=(existing_case.pathway == "EMERGENCY" and existing_case.acuity_tier == "CRITICAL"),
+                    red_flags=[],
                 )
 
     # 7. Patient Scope Authorization & Validation
@@ -666,14 +729,60 @@ async def submit_frontend_intake(
             source_language=source_lang,
             target_language="en",
             translation_status="NONE" if source_lang == "en" else "TRANSLATION_PENDING",
-            primary_syndrome=None,
-            required_bundle=None,
+            primary_syndrome=primary_syndrome,
+            required_bundle=required_bundle,
             is_closed=False,
             created_at=utc_now(),
             updated_at=utc_now(),
         )
         db.add(case)
         await db.flush()
+
+        # C2. Evaluate Uncertainty, Information Gaps & Follow-Up Questions
+        captured_data: Dict[str, Any] = {
+            "symptom_duration": req.symptom_duration,
+            **(req.vitals or {}),
+        }
+        for sym in extracted_symptoms:
+            captured_data[sym] = True
+        if "chest pain" in narrative_full.lower():
+            captured_data["chest_pain"] = True
+        if "onset" in narrative_full.lower() or "duration" in narrative_full.lower() or req.symptom_duration:
+            captured_data["onset_duration"] = req.symptom_duration or "Reported"
+
+        ev_dict_list = [{
+            "confidence_score": 0.95 if actor.is_patient() else 0.90,
+            "verification_status": "UNVERIFIED",
+        }]
+
+        uncertainty_eval = evaluate_uncertainty_and_gaps(
+            syndrome=primary_syndrome,
+            captured_data=captured_data,
+            evidence_records=ev_dict_list,
+            narrative_text=narrative_full,
+        )
+        case.uncertainty_score = uncertainty_eval.get("uncertainty_score", 0.50)
+
+        created_follow_ups = []
+        for q_item in uncertainty_eval.get("follow_up_questions", []):
+            fq = FollowUpQuestion(
+                id=str(uuid.uuid4()),
+                case_id=case.id,
+                question_text=q_item.get("question", ""),
+                reason=f"Missing protocol parameter: {q_item.get('parameter', '')}",
+                priority="CRITICAL" if canonical_pathway == "EMERGENCY" else "IMPORTANT",
+                status="PENDING",
+                created_at=utc_now(),
+            )
+            db.add(fq)
+            created_follow_ups.append({
+                "id": fq.id,
+                "parameter": q_item.get("parameter"),
+                "question": fq.question_text,
+                "reason": fq.reason,
+                "priority": fq.priority,
+                "status": fq.status,
+            })
 
         # D. Initial Case State Transition Milestone
         transition = CaseStateTransition(
@@ -759,6 +868,46 @@ async def submit_frontend_intake(
             created_at=utc_now(),
         )
         db.add(ev_compat)
+
+        # Document Evidence Record (provenance: OCR_EXTRACTED) if external medical document was uploaded
+        if req.document_uploaded:
+            ev_doc = Evidence(
+                id=str(uuid.uuid4()),
+                case_id=case.id,
+                source_class="OCR_EXTRACTED",
+                epistemic_state="KNOWN",
+                parameter_name="lab_report_summary" if (req.document_type or "").upper() == "LAB_REPORT" else "uploaded_medical_document",
+                content_value={
+                    "document_type": req.document_type or "MEDICAL_REPORT",
+                    "status": "CAPTURED",
+                    "notes": "Medical document attached at intake. Local OCR extraction referenced.",
+                },
+                confidence_score=0.88,
+                captured_timestamp=utc_now(),
+                provenance_metadata={
+                    "source": "OCR_EXTRACTED",
+                    "document_type": req.document_type or "MEDICAL_REPORT",
+                    "actor_id": actor.actor_id,
+                    "actor_role": actor.role,
+                },
+                verification_metadata={"verified": False, "verification_status": "UNVERIFIED"},
+                created_at=utc_now(),
+            )
+            db.add(ev_doc)
+            ev_doc_compat = EvidenceRecord(
+                id=str(uuid.uuid4()),
+                case_id=case.id,
+                provenance_type="OCR_EXTRACTED",
+                source_filename=f"intake_upload_{req.document_type or 'document'}.pdf",
+                extracted_payload={
+                    "document_type": req.document_type or "MEDICAL_REPORT",
+                    "status": "CAPTURED",
+                },
+                confidence_score=0.88,
+                verification_status="UNVERIFIED",
+                created_at=utc_now(),
+            )
+            db.add(ev_doc_compat)
 
         # G. Physiological Vitals (if provided at intake)
         if req.vitals:
@@ -1055,5 +1204,19 @@ async def submit_frontend_intake(
         message="Patient intake recorded successfully in live clinical database.",
         is_mock=False,
         is_duplicate=False,
+        primary_syndrome=primary_syndrome,
+        required_bundle=required_bundle,
+        summary=f"Patient presents with {complaint_clean}. Primary syndrome: {primary_syndrome}. Recommended care bundle: {required_bundle}.",
+        extracted_entities=[{"name": s, "type": "SYMPTOM", "source": source_class, "provenance": "NARRATIVE"} for s in extracted_symptoms] + (
+            [{"name": f"uploaded_{req.document_type or 'document'}", "type": "DOCUMENT", "source": "OCR_EXTRACTED", "provenance": "OCR_EXTRACTED"}]
+            if req.document_uploaded else []
+        ),
+        uncertainty_score=case.uncertainty_score,
+        missing_parameters=uncertainty_eval.get("missing_parameters", []),
+        follow_up_questions=created_follow_ups,
+        conflicts=uncertainty_eval.get("conflicts", []),
+        safety_escalated=safety_escalated,
+        red_flags=eval_red_flags,
+        parameter_audit=uncertainty_eval.get("parameter_audit", []),
     )
 

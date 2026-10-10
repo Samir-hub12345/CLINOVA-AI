@@ -8,7 +8,7 @@ Never exposes internal database implementation details.
 
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any, Union
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, computed_field
 
 
 # ---------------------------------------------------------------------------
@@ -383,6 +383,10 @@ class FollowUpAnswerRead(BaseModel):
     answered_at: datetime
     evidence_id: Optional[str]
     created_at: datetime
+
+    @computed_field
+    def answer_id(self) -> str:
+        return self.id
 
 
 # ---------------------------------------------------------------------------

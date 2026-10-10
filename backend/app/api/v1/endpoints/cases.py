@@ -7,6 +7,7 @@ and encounter outcome closure (DOC-07).
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+import uuid
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -16,12 +17,26 @@ from app.db.session import get_db
 from app.db.models import (
     Case,
     Patient,
+    Encounter,
     Facility,
     CaseOutcome,
+    CaseStateTransition,
+    TimelineEvent,
+    AuditEvent,
     AuditLog,
     VitalReading,
     Vital,
     ClinicianDecision,
+    utc_now,
+)
+from app.schemas.intake import (
+    PathwayChangeRequest,
+    PathwayChangeResponse,
+    EmergencyHandoffRequest,
+    EmergencyHandoffResponse,
+    VALID_DESTINATION_UNITS,
+    VALID_PATHWAYS,
+    normalize_pathway,
 )
 from app.domain.signalgraph.engine import signal_engine
 from app.domain.triage import sort_clinical_queue, compute_deterministic_triage
@@ -395,3 +410,267 @@ async def get_case_outcome(
         "version": outcome.version,
         "recorded_at": outcome.recorded_at.isoformat() if outcome.recorded_at else None,
     }
+
+
+@router.patch("/{case_id}/pathway", response_model=PathwayChangeResponse, tags=["Case Management"])
+async def update_case_pathway(
+    case_id: str,
+    req: PathwayChangeRequest,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
+    """
+    Authorized staff clinical pathway transition endpoint (DOC-07 Section B).
+    Patients cannot modify pathways. Staff authorization, validation and audit logging strictly enforced.
+    """
+    # 1. Staff RBAC Enforcement
+    if actor.is_patient():
+        raise ClinovaAPIError(
+            category="AUTHORIZATION_ERROR",
+            message="Patients are not authorized to modify clinical pathways. Authorized clinical staff required.",
+            status_code=403,
+        )
+    check_role_permission(actor.role, Permission.CLINICAL_STATE_TRANSITION)
+
+    case = await db.get(Case, case_id)
+    if not case:
+        raise ClinovaAPIError(category="NOT_FOUND", message=f"Case '{case_id}' not found.", status_code=404)
+    await authorize_case_access(case, actor, required_permission=Permission.CLINICAL_STATE_TRANSITION, db=db)
+
+    if case.is_closed:
+        raise ClinovaAPIError(category="VALIDATION_ERROR", message="Cannot alter pathway of a closed case.", status_code=400)
+
+    old_pathway = case.pathway
+    new_pathway = normalize_pathway(req.pathway)
+    if new_pathway not in VALID_PATHWAYS:
+        raise ClinovaAPIError(
+            category="VALIDATION_ERROR",
+            message=f"Invalid clinical pathway '{req.pathway}'. Allowed pathways: {sorted(list(VALID_PATHWAYS))}",
+            status_code=422,
+        )
+
+    # Update pathway and acuity tier
+    case.pathway = new_pathway
+    if new_pathway == "EMERGENCY":
+        case.acuity_tier = "CRITICAL"
+        case.risk_score = max(case.risk_score or 0.10, 0.85)
+    elif old_pathway == "EMERGENCY" and new_pathway != "EMERGENCY":
+        case.acuity_tier = "ROUTINE"
+
+    case.state_version += 1
+    case.updated_at = utc_now()
+
+    # Encounter pathway alignment
+    if case.encounter_id:
+        encounter = await db.get(Encounter, case.encounter_id)
+        if encounter:
+            encounter.pathway = new_pathway
+            encounter.updated_at = utc_now()
+
+    # State transition milestone
+    transition = CaseStateTransition(
+        id=str(uuid.uuid4()),
+        case_id=case.id,
+        from_state=case.current_state,
+        to_state=case.current_state,
+        actor_id=actor.actor_id,
+        actor_role=actor.role,
+        reason=req.reason or f"Pathway transitioned from {old_pathway} to {new_pathway}",
+        state_version=case.state_version,
+        created_at=utc_now(),
+    )
+    db.add(transition)
+
+    # Timeline event
+    tl = TimelineEvent(
+        id=str(uuid.uuid4()),
+        case_id=case.id,
+        event_type="PATHWAY_CHANGED",
+        event_title=f"Pathway Updated: {new_pathway}",
+        event_content=f"Clinical pathway changed from {old_pathway} to {new_pathway}. Justification: {req.reason or 'Authorized staff update'}.",
+        event_timestamp=utc_now(),
+        actor_id=actor.actor_id,
+        actor_role=actor.role,
+        is_conflict=False,
+        provenance_metadata={
+            "old_pathway": old_pathway,
+            "new_pathway": new_pathway,
+            "reason": req.reason,
+        },
+        created_at=utc_now(),
+    )
+    db.add(tl)
+
+    # Audit ledger
+    audit_ev = AuditEvent(
+        case_id=case.id,
+        actor_id=actor.actor_id,
+        actor_role=actor.role,
+        action="case.pathway_changed",
+        object_type="CASE",
+        object_id=case.id,
+        result="SUCCESS",
+        details={
+            "old_pathway": old_pathway,
+            "new_pathway": new_pathway,
+            "reason": req.reason,
+            "state_version": case.state_version,
+        },
+        created_at=utc_now(),
+    )
+    db.add(audit_ev)
+
+    audit_log = AuditLog(
+        actor_id=actor.actor_id,
+        action="CASE_PATHWAY_TRANSITIONED",
+        entity_type="CASE",
+        entity_id=case.id,
+        details={"old_pathway": old_pathway, "new_pathway": new_pathway, "reason": req.reason},
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(case)
+
+    return PathwayChangeResponse(
+        success=True,
+        case_id=case.id,
+        encounter_id=case.encounter_id or "",
+        pathway=case.pathway,
+        acuity_tier=case.acuity_tier,
+        status=case.status,
+        current_state=case.current_state,
+        message=f"Case pathway successfully updated to {new_pathway}.",
+    )
+
+
+@router.post("/{case_id}/handoff", response_model=EmergencyHandoffResponse, tags=["Case Management"])
+async def record_emergency_handoff(
+    case_id: str,
+    req: EmergencyHandoffRequest,
+    db: AsyncSession = Depends(get_db),
+    actor: ActorContext = Depends(get_current_actor),
+):
+    """
+    Authorized Emergency Ward & Operating Theatre handoff endpoint (DOC-07 Section D.5).
+    Validates destination unit against configured clinical facility units,
+    persists receiving team, notes, status, and creates longitudinal timeline and audit events.
+    """
+    if actor.is_patient():
+        raise ClinovaAPIError(
+            category="AUTHORIZATION_ERROR",
+            message="Patients are not authorized to execute clinical ward or OT handoffs.",
+            status_code=403,
+        )
+    check_role_permission(actor.role, Permission.CLINICAL_STATE_TRANSITION)
+
+    dest_clean = req.destination_unit.strip().upper()
+    if dest_clean not in VALID_DESTINATION_UNITS:
+        raise ClinovaAPIError(
+            category="VALIDATION_ERROR",
+            message=f"Invalid destination unit '{req.destination_unit}'. Valid units: {sorted(list(VALID_DESTINATION_UNITS))}",
+            status_code=422,
+        )
+
+    case = await db.get(Case, case_id)
+    if not case:
+        raise ClinovaAPIError(category="NOT_FOUND", message=f"Case '{case_id}' not found.", status_code=404)
+    await authorize_case_access(case, actor, required_permission=Permission.CLINICAL_STATE_TRANSITION, db=db)
+
+    if case.is_closed:
+        raise ClinovaAPIError(
+            category="VALIDATION_ERROR",
+            message="Cannot execute emergency handoff on a closed case.",
+            status_code=400,
+        )
+
+    now = utc_now()
+    old_state = case.current_state
+
+    # Transition state to handoff with emergency pathway alignment
+    case.pathway = "EMERGENCY"
+    case.acuity_tier = "CRITICAL"
+    case.current_state = "EMERGENCY_HANDOFF"
+    case.status = "HANDOFF"
+    case.state_version += 1
+    case.updated_at = now
+
+    transition = CaseStateTransition(
+        id=str(uuid.uuid4()),
+        case_id=case.id,
+        from_state=old_state,
+        to_state="EMERGENCY_HANDOFF",
+        actor_id=actor.actor_id,
+        actor_role=actor.role,
+        reason=f"Emergency transfer to {dest_clean} ({req.receiving_team})",
+        state_version=case.state_version,
+        created_at=now,
+    )
+    db.add(transition)
+
+    tl = TimelineEvent(
+        id=str(uuid.uuid4()),
+        case_id=case.id,
+        event_type="EMERGENCY_HANDOFF",
+        event_title=f"Emergency Handoff to {dest_clean}",
+        event_content=f"Case transferred to {dest_clean}. Receiving team: {req.receiving_team}. Status: {req.handoff_status}. Notes: {req.notes or 'None'}",
+        event_timestamp=now,
+        actor_id=actor.actor_id,
+        actor_role=actor.role,
+        is_conflict=False,
+        provenance_metadata={
+            "destination_unit": dest_clean,
+            "receiving_team": req.receiving_team,
+            "handoff_status": req.handoff_status,
+            "notes": req.notes,
+        },
+        created_at=now,
+    )
+    db.add(tl)
+
+    audit_ev = AuditEvent(
+        case_id=case.id,
+        actor_id=actor.actor_id,
+        actor_role=actor.role,
+        action="case.emergency_handoff",
+        object_type="CASE",
+        object_id=case.id,
+        result="SUCCESS",
+        details={
+            "destination_unit": dest_clean,
+            "receiving_team": req.receiving_team,
+            "handoff_status": req.handoff_status,
+            "notes": req.notes,
+        },
+        created_at=now,
+    )
+    db.add(audit_ev)
+
+    audit_log = AuditLog(
+        actor_id=actor.actor_id,
+        action="CASE_EMERGENCY_HANDOFF_RECORDED",
+        entity_type="CASE",
+        entity_id=case.id,
+        details={
+            "destination_unit": dest_clean,
+            "receiving_team": req.receiving_team,
+            "handoff_status": req.handoff_status,
+        },
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(case)
+
+    return EmergencyHandoffResponse(
+        success=True,
+        case_id=case.id,
+        destination_unit=dest_clean,
+        receiving_team=req.receiving_team,
+        handoff_status=req.handoff_status or "ACCEPTED",
+        status=case.status,
+        current_state=case.current_state,
+        recorded_at=now.isoformat(),
+        message=f"Emergency handoff to {dest_clean} successfully recorded and audited.",
+    )
+

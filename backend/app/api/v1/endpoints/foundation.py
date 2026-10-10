@@ -1452,6 +1452,13 @@ async def add_follow_up_question(
     description="Records a patient or staff response to an outstanding follow-up question.",
     tags=["Follow-up"],
 )
+@router.post(
+    "/cases/{case_id}/questions/answer",
+    response_model=FollowUpAnswerRead,
+    summary="Answer Follow-up Question Alias",
+    description="Frontend alias route to record an answer to an outstanding follow-up question.",
+    tags=["Follow-up"],
+)
 async def answer_follow_up(
     case_id: str = Path(..., description="Canonical Case UUID"),
     req: FollowUpAnswerCreate = ...,
@@ -1489,6 +1496,72 @@ async def answer_follow_up(
     db.add(answer)
 
     question.status = "ANSWERED"
+
+    # Add discrete clinical evidence item for answered clarification
+    ev_ans = Evidence(
+        id=str(uuid.uuid4()),
+        case_id=case_id,
+        source_class="PATIENT_REPORTED" if actor.is_patient() else "STAFF_ENTERED",
+        epistemic_state="KNOWN",
+        parameter_name=f"clarification_{question.id[:8]}",
+        content_value={
+            "question": question.question_text,
+            "answer": req.answer_text,
+            "parameter_reason": getattr(question, "reason", ""),
+        },
+        confidence_score=0.95 if actor.is_patient() else 0.90,
+        captured_timestamp=utc_now(),
+        provenance_metadata={
+            "question_id": req.question_id,
+            "answer_id": ans_id,
+            "actor_id": actor.actor_id,
+            "actor_role": actor.role,
+        },
+        verification_metadata={"verified": False, "verification_status": "UNVERIFIED"},
+        created_at=utc_now(),
+    )
+    db.add(ev_ans)
+
+    # Timeline Milestone Event
+    tl = TimelineEvent(
+        id=str(uuid.uuid4()),
+        case_id=case_id,
+        event_type="FOLLOW_UP_ANSWERED",
+        event_title="Clarification Question Answered",
+        event_content=f"Q: '{question.question_text[:80]}' -> A: '{req.answer_text[:100]}'",
+        event_timestamp=utc_now(),
+        actor_id=actor.actor_id,
+        actor_role=actor.role,
+        evidence_id=ev_ans.id,
+        is_conflict=False,
+        provenance_metadata={
+            "question_id": req.question_id,
+            "answer_id": ans_id,
+            "reason": getattr(question, "reason", ""),
+        },
+        created_at=utc_now(),
+    )
+    db.add(tl)
+
+    # Recompute uncertainty & update case summary context
+    pending_stmt = select(FollowUpQuestion).where(
+        FollowUpQuestion.case_id == case_id,
+        FollowUpQuestion.status == "PENDING",
+        FollowUpQuestion.id != req.question_id,
+    )
+    pending_questions = (await db.execute(pending_stmt)).scalars().all()
+    if not pending_questions:
+        # All questions answered - protocol uncertainty drops significantly
+        case.uncertainty_score = max(0.10, round((case.uncertainty_score or 0.50) * 0.45, 2))
+    else:
+        case.uncertainty_score = max(0.15, round((case.uncertainty_score or 0.50) * 0.85, 2))
+
+    if req.answer_text:
+        clarification_snippet = f" Clarification: {req.answer_text[:120]}."
+        if case.presenting_complaint and clarification_snippet not in case.presenting_complaint:
+            case.presenting_complaint = (case.presenting_complaint + clarification_snippet)[:5000]
+
+    case.updated_at = utc_now()
 
     audit = AuditEvent(
         case_id=case_id,

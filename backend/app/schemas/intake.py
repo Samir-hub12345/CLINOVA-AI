@@ -282,3 +282,82 @@ class PatientIntakeResponse(BaseModel):
     message: str = Field(..., description="Clinical system status acknowledgment")
     is_mock: bool = Field(False, description="Whether this response was served from a mock fixture")
     is_duplicate: bool = Field(False, description="True if idempotency prevented duplicate creation")
+    primary_syndrome: Optional[str] = Field(None, description="Extracted clinical syndrome")
+    required_bundle: Optional[str] = Field(None, description="Recommended clinical care bundle")
+    summary: Optional[str] = Field(None, description="Clinical narrative summary")
+    extracted_entities: Optional[List[Dict[str, Any]]] = Field(None, description="Discrete clinical findings extracted")
+    uncertainty_score: Optional[float] = Field(None, description="Calculated epistemic uncertainty score")
+    missing_parameters: Optional[List[str]] = Field(None, description="Missing protocol parameters")
+    follow_up_questions: Optional[List[Dict[str, Any]]] = Field(None, description="Adaptive clarification questions")
+    conflicts: Optional[List[Dict[str, Any]]] = Field(None, description="Contradictions detected")
+    safety_escalated: Optional[bool] = Field(False, description="True if safety rules triggered emergency escalation")
+    red_flags: Optional[List[Dict[str, Any]]] = Field(None, description="Triggered or evaluated clinical red flags")
+    parameter_audit: Optional[List[Dict[str, Any]]] = Field(None, description="Detailed epistemic status for each protocol parameter")
+
+
+# ---------------------------------------------------------------------------
+# Pathway Transition & Emergency Handoff Schemas
+# ---------------------------------------------------------------------------
+
+class PathwayChangeRequest(BaseModel):
+    """Staff-authorized clinical pathway transition request."""
+    model_config = ConfigDict(extra="forbid")
+    pathway: str = Field(..., description="New clinical pathway to assign")
+    reason: Optional[str] = Field(None, max_length=255, description="Clinical justification for pathway change")
+
+    @field_validator("pathway")
+    @classmethod
+    def validate_pathway_field(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Pathway cannot be empty.")
+        clean = v.strip().upper()
+        if clean not in VALID_PATHWAYS:
+            raise ValueError(f"Invalid clinical pathway '{v}'. Allowed pathways: {sorted(list(VALID_PATHWAYS))}")
+        return clean
+
+
+class PathwayChangeResponse(BaseModel):
+    """Response contract for pathway changes."""
+    success: bool = True
+    case_id: str
+    encounter_id: str
+    pathway: str
+    acuity_tier: str
+    status: str
+    current_state: str
+    message: str
+
+
+VALID_DESTINATION_UNITS = {
+    "EMERGENCY_WARD",
+    "OPERATING_THEATRE",
+    "ICU",
+    "TRAUMA_BAY",
+    "RESUSCITATION_BAY",
+    "SURGICAL_OT",
+    "CARDIAC_CATH_LAB",
+    "STEP_DOWN_UNIT",
+}
+
+
+class EmergencyHandoffRequest(BaseModel):
+    """Staff-authorized emergency/OT handoff transfer request."""
+    model_config = ConfigDict(extra="forbid")
+    destination_unit: str = Field(..., description="Target unit: EMERGENCY_WARD, OPERATING_THEATRE, ICU, etc.")
+    receiving_team: str = Field(..., min_length=2, max_length=128, description="Receiving clinical team or surgeon")
+    handoff_status: Optional[str] = Field("ACCEPTED", description="Status: PENDING_ACCEPTANCE, ACCEPTED, IN_TRANSIT, COMPLETED")
+    notes: Optional[str] = Field(None, max_length=1000, description="SBAR handoff notes and clinical requirements")
+
+
+class EmergencyHandoffResponse(BaseModel):
+    """Response contract for emergency/OT handoff transfer."""
+    success: bool = True
+    case_id: str
+    destination_unit: str
+    receiving_team: str
+    handoff_status: str
+    status: str
+    current_state: str
+    recorded_at: str
+    message: str
+
