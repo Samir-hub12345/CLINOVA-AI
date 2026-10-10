@@ -156,22 +156,29 @@ export default function LoginPage() {
             <Link href="/" className="row gap-2" style={{ textDecoration: "none" }}>
               <div
                 style={{
-                  width: 32,
-                  height: 32,
-                  minWidth: 32,
-                  minHeight: 32,
-                  borderRadius: "var(--r-md, 8px)",
-                  backgroundColor: "var(--navy-800, #16324f)",
+                  width: 34,
+                  height: 34,
+                  minWidth: 34,
+                  minHeight: 34,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
+                  position: "relative",
                 }}
-                aria-hidden="true"
               >
-                <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 2v12M2 8h12" stroke="#5fd3c7" strokeWidth="2.75" strokeLinecap="round" />
-                </svg>
+                <Image
+                  src="/branding/clinova-ai-mark.png"
+                  alt="CLINOVA AI Logo"
+                  width={34}
+                  height={34}
+                  priority
+                  style={{
+                    width: 34,
+                    height: 34,
+                    objectFit: "contain",
+                  }}
+                />
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span
