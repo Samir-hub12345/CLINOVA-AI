@@ -63,3 +63,4 @@ scratch/
 backups/
 .clinova/
 .reference_bundle/
+test-results/
