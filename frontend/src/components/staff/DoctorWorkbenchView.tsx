@@ -54,6 +54,18 @@ interface DoctorWorkbenchViewProps {
 }
 
 export const DoctorWorkbenchView: React.FC<DoctorWorkbenchViewProps> = ({ caseId }) => {
+  return (
+    <RoleGuard
+      allowedRoles={["CLINICIAN", "DOCTOR", "SYSTEM_ADMIN", "AUDITOR"]}
+      title="Doctor Workbench Access Restricted"
+      message="Only licensed medical clinicians, department reviewers, and audit officers hold authority to access the clinical case workbench."
+    >
+      <DoctorWorkbenchContent caseId={caseId} />
+    </RoleGuard>
+  );
+};
+
+const DoctorWorkbenchContent: React.FC<DoctorWorkbenchViewProps> = ({ caseId }) => {
   const [data, setData] = useState<CareGraphData | null>(null);
   const [evaluation, setEvaluation] = useState<OrchestrationEvaluation | null>(null);
   const [triageSnapshot, setTriageSnapshot] = useState<TriageSnapshot | null>(null);
@@ -283,12 +295,7 @@ export const DoctorWorkbenchView: React.FC<DoctorWorkbenchViewProps> = ({ caseId
   const latestVitals = vitals_history[vitals_history.length - 1] || {};
 
   return (
-    <RoleGuard
-      allowedRoles={["CLINICIAN", "DOCTOR", "SYSTEM_ADMIN", "AUDITOR"]}
-      title="Doctor Workbench Access Restricted"
-      message="Only licensed medical clinicians, department reviewers, and audit officers hold authority to access the clinical case workbench."
-    >
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--clinova-space-5)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--clinova-space-5)" }}>
       {/* Top Breadcrumb & Case Bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1040,6 +1047,5 @@ export const DoctorWorkbenchView: React.FC<DoctorWorkbenchViewProps> = ({ caseId
         </div>
       </div>
     </div>
-    </RoleGuard>
   );
 };

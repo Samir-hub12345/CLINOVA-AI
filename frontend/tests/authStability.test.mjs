@@ -165,4 +165,46 @@ console.log("--- Starting CLINOVA Authentication & Stability Test Suite ---");
   console.log("✓ Test 7: Redundant clearAuthToken avoids spurious expired events passed");
 }
 
-console.log("--- All Authentication Stability Tests Passed (7/7) ---");
+// Test 8: clinova_auth_changed event carries user persona payload in detail
+{
+  dispatchedEvents.length = 0;
+  const loginRes = await login("clinician", "ClinovaDemo2026!");
+
+  assert.strictEqual(loginRes.user.role, "CLINICIAN");
+  const authEvents = dispatchedEvents.filter((e) => e.name === "clinova_auth_changed");
+  assert.strictEqual(authEvents.length, 1, "Exactly one auth event fired");
+  assert.strictEqual(authEvents[0].detail?.user?.role, "CLINICIAN", "Event detail must contain user object");
+  assert.strictEqual(authEvents[0].detail?.user?.full_name, "Dr. Priya Sharma", "Event detail user must match Priya Sharma");
+
+  console.log("✓ Test 8: Event detail delivers full persona payload for synchronous hydration passed");
+}
+
+// Test 9: Rapid multi-role switching across all clinical roles preserves exact stored role
+{
+  const roles = [
+    { id: "nurse", expectedRole: "NURSE" },
+    { id: "receptionist", expectedRole: "RECEPTIONIST" },
+    { id: "facility_admin", expectedRole: "FACILITY_ADMIN" },
+    { id: "sysadmin", expectedRole: "SYSTEM_ADMIN" },
+    { id: "clinician", expectedRole: "CLINICIAN" },
+  ];
+
+  for (const r of roles) {
+    const switched = await switchPersona(r.id);
+    assert.strictEqual(switched.role, r.expectedRole, `Role for ${r.id} must be ${r.expectedRole}`);
+    assert.strictEqual(getStoredUser()?.role, r.expectedRole, `Stored role must match ${r.expectedRole}`);
+  }
+
+  console.log("✓ Test 9: Rapid multi-role switching preserves exact session identity across all roles passed");
+}
+
+// Test 10: getStoredUser resolves synchronously without requiring async microtask delays
+{
+  const stored = getStoredUser();
+  assert.ok(stored, "Stored user must be immediately readable from session storage");
+  assert.strictEqual(stored.role, "CLINICIAN", "Stored user must be CLINICIAN without awaiting promise");
+
+  console.log("✓ Test 10: Synchronous session storage reads guarantee zero-delay RoleGuard mount passed");
+}
+
+console.log("--- All Authentication Stability Tests Passed (10/10) ---");

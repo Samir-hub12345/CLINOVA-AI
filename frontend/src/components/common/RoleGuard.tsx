@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Persona } from "@/types";
-import { getCurrentUser } from "@/lib/api";
+import { getCurrentUser, getStoredUser, getAuthToken } from "@/lib/api";
 import { LoadingState } from "@/components/ui/States";
 import { UnauthorizedState } from "./UnauthorizedState";
 
@@ -25,6 +25,22 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   useEffect(() => {
     let mounted = true;
 
+    // 1. Immediately check cached session identity
+    const cached = getStoredUser();
+    const token = getAuthToken();
+
+    if (cached) {
+      setUser(cached);
+      setLoading(false);
+    } else if (!token) {
+      // Unambiguously unauthenticated: terminate loading immediately
+      setUser(null);
+      setLoading(false);
+    } else {
+      // Token exists but identity needs resolution: validate with backend
+      checkAuth();
+    }
+
     async function checkAuth() {
       try {
         const u = await getCurrentUser();
@@ -40,19 +56,28 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
       }
     }
 
-    checkAuth();
-
-    const handleAuthChange = () => {
+    const handleAuthChange = (e: Event) => {
+      const custom = e as CustomEvent<{ token: string | null; user: Persona | null }>;
+      if (custom.detail && custom.detail.user !== undefined) {
+        setUser(custom.detail.user);
+        setLoading(false);
+        return;
+      }
       checkAuth();
     };
 
+    const handleSessionExpired = () => {
+      setUser(null);
+      setLoading(false);
+    };
+
     window.addEventListener("clinova_auth_changed", handleAuthChange);
-    window.addEventListener("clinova_session_expired", handleAuthChange);
+    window.addEventListener("clinova_session_expired", handleSessionExpired);
 
     return () => {
       mounted = false;
       window.removeEventListener("clinova_auth_changed", handleAuthChange);
-      window.removeEventListener("clinova_session_expired", handleAuthChange);
+      window.removeEventListener("clinova_session_expired", handleSessionExpired);
     };
   }, []);
 

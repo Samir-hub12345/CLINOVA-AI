@@ -15,7 +15,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Persona } from "@/types";
-import { getPersonas, getCurrentUser, switchPersona, login, logout } from "@/lib/api";
+import { getPersonas, getCurrentUser, getStoredUser, switchPersona, login, logout, FALLBACK_PERSONAS } from "@/lib/api";
 import { RoleBadge } from "./RoleBadge";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { NotificationCenter } from "./NotificationCenter";
@@ -32,7 +32,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenSystemDrawer,
 }) => {
   const pathname = usePathname();
-  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [personas, setPersonas] = useState<Persona[]>(FALLBACK_PERSONAS);
   const [currentUser, setCurrentUser] = useState<Persona | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -43,25 +43,42 @@ export const TopBar: React.FC<TopBarProps> = ({
   const [loginLoading, setLoginLoading] = useState(false);
 
   useEffect(() => {
-    async function initUser() {
+    // 1. Immediately hydrate cached user from session storage synchronously on client mount
+    const stored = getStoredUser();
+    if (stored) {
+      setCurrentUser(stored);
+    }
+
+    // 2. Validate live session and fetch updated personas in background
+    async function validateSession() {
       try {
-        const [u, plist] = await Promise.all([getCurrentUser(), getPersonas()]);
-        setCurrentUser(u);
-        setPersonas(plist);
+        const u = await getCurrentUser();
+        if (u) {
+          setCurrentUser(u);
+        }
+        const plist = await getPersonas();
+        if (plist && plist.length > 0) {
+          setPersonas(plist);
+        }
       } catch {
         // Handled by resilient fallback
       }
     }
-    initUser();
+    validateSession();
 
     const handleExpired = () => {
       setSessionExpired(true);
       setCurrentUser(null);
     };
 
-    const handleAuthChange = () => {
-      setSessionExpired(false);
-      initUser();
+    const handleAuthChange = (e: Event) => {
+      const custom = e as CustomEvent<{ token: string | null; user: Persona | null }>;
+      if (custom.detail && custom.detail.user !== undefined) {
+        setSessionExpired(false);
+        setCurrentUser(custom.detail.user);
+        return;
+      }
+      validateSession();
     };
 
     window.addEventListener("clinova_session_expired", handleExpired);
@@ -87,6 +104,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     try {
       await logout();
       setCurrentUser(null);
+      setSessionExpired(false);
     } catch (e) {
       console.warn("Logout error:", e);
     }
@@ -146,125 +164,122 @@ export const TopBar: React.FC<TopBarProps> = ({
             gap: 16,
           }}
         >
-          {/* Brand Identity */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-            <Link
-              href="/"
+          {/* 1. Brand Identity */}
+          <Link
+            href="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              textDecoration: "none",
+              flexShrink: 0,
+            }}
+          >
+            <div
               style={{
+                width: 32,
+                height: 32,
+                minWidth: 32,
+                minHeight: 32,
+                borderRadius: "var(--clinova-radius-md)",
+                border: "1px solid var(--clinova-border)",
+                backgroundColor: "var(--clinova-surface-subtle)",
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                textDecoration: "none",
+                justifyContent: "center",
+                overflow: "hidden",
                 flexShrink: 0,
               }}
             >
-              <div
+              <Image
+                src="/branding/clinova-ai-mark.png"
+                alt="CLINOVA AI Logo"
+                width={28}
+                height={28}
+                priority
+                style={{ objectFit: "contain", width: 28, height: 28 }}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+              <span
                 style={{
-                  width: 32,
-                  height: 32,
-                  minWidth: 32,
-                  minHeight: 32,
-                  borderRadius: "var(--clinova-radius-md)",
-                  border: "1px solid var(--clinova-border)",
-                  backgroundColor: "var(--clinova-surface-subtle)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  flexShrink: 0,
+                  fontSize: "1.0625rem",
+                  fontWeight: 800,
+                  color: "var(--clinova-text-primary)",
+                  letterSpacing: "-0.02em",
+                  display: "block",
+                  lineHeight: 1.15,
+                  whiteSpace: "nowrap",
                 }}
               >
-                <Image
-                  src="/branding/clinova-ai-mark.png"
-                  alt="CLINOVA AI Logo"
-                  width={28}
-                  height={28}
-                  priority
-                  style={{ objectFit: "contain", width: 28, height: 28 }}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
-                <span
-                  style={{
-                    fontSize: "1.0625rem",
-                    fontWeight: 800,
-                    color: "var(--clinova-text-primary)",
-                    letterSpacing: "-0.02em",
-                    display: "block",
-                    lineHeight: 1.15,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  CLINOVA AI
-                </span>
-                <span
-                  style={{
-                    fontSize: "0.625rem",
-                    color: "var(--clinova-accent)",
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    display: "block",
-                    lineHeight: 1.2,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Continuous Care Intelligence
-                </span>
-              </div>
-            </Link>
+                CLINOVA AI
+              </span>
+              <span
+                style={{
+                  fontSize: "0.625rem",
+                  color: "var(--clinova-accent)",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  display: "block",
+                  lineHeight: 1.2,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Continuous Care Intelligence
+              </span>
+            </div>
+          </Link>
 
-            {/* Desktop Navigation Links */}
-            <nav
-              aria-label="Main Navigation"
-              style={{
-                display: "none",
-                alignItems: "center",
-                gap: 2,
-                marginLeft: 10,
-                flexShrink: 1,
-                minWidth: 0,
-              }}
-              className="clinova-desktop-nav"
-            >
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  style={{
-                    fontSize: "0.8125rem",
-                    fontWeight: 600,
-                    textDecoration: "none",
-                    padding: "5px 9px",
-                    borderRadius: "var(--clinova-radius-md)",
-                    whiteSpace: "nowrap",
-                    color: isActive(link.href)
-                      ? "var(--clinova-accent-text)"
-                      : "var(--clinova-text-secondary)",
-                    backgroundColor: isActive(link.href)
-                      ? "var(--clinova-accent-light)"
-                      : "transparent",
-                    border: isActive(link.href)
-                      ? "1px solid var(--clinova-accent-border)"
-                      : "1px solid transparent",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+          {/* 2. Desktop Navigation Links */}
+          <nav
+            aria-label="Main Navigation"
+            style={{
+              display: "none",
+              alignItems: "center",
+              gap: 3,
+              flexShrink: 1,
+              minWidth: 0,
+            }}
+            className="clinova-desktop-nav"
+          >
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                style={{
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  padding: "4px 8px",
+                  borderRadius: "var(--clinova-radius-md)",
+                  whiteSpace: "nowrap",
+                  color: isActive(link.href)
+                    ? "var(--clinova-accent-text)"
+                    : "var(--clinova-text-secondary)",
+                  backgroundColor: isActive(link.href)
+                    ? "var(--clinova-accent-light)"
+                    : "transparent",
+                  border: isActive(link.href)
+                    ? "1px solid var(--clinova-accent-border)"
+                    : "1px solid transparent",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
-          {/* Operational Status, Role Switcher & Drawer Triggers */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          {/* 3. Operational Status, Role Switcher & Drawer Triggers */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {/* Connection Status Indicator */}
-            <div className="clinova-desktop-item">
+            <div className="clinova-desktop-status">
               <ConnectionStatus status="ONLINE" />
             </div>
 
             {/* Clinical Notifications & Quick Drawer Action Toggles */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <NotificationCenter />
               {onOpenReferralDrawer && (
                 <button
@@ -302,7 +317,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               {currentUser ? (
                 <>
-                  <div className="clinova-desktop-item">
+                  <div className="clinova-desktop-badge">
                     <RoleBadge role={currentUser.role} />
                   </div>
                   <select
@@ -318,7 +333,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                       backgroundColor: "var(--clinova-surface)",
                       color: "var(--clinova-text-primary)",
                       cursor: "pointer",
-                      maxWidth: 180,
+                      maxWidth: 160,
                       textOverflow: "ellipsis",
                     }}
                   >

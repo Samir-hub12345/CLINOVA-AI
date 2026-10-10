@@ -784,11 +784,23 @@ p {
   display: inline-flex;
 }
 
-@media (min-width: 1040px) {
+@media (min-width: 1180px) {
   .clinova-desktop-nav {
     display: flex !important;
   }
   .clinova-mobile-menu-btn {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  .clinova-desktop-status {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .clinova-desktop-badge {
     display: none !important;
   }
 }
