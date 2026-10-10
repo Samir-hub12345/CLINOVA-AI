@@ -410,36 +410,27 @@ export const TopBar: React.FC<TopBarProps> = ({
             </div>
 
             {/* Role Switcher & Session Controls */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {currentUser ? (
                 <>
                   <div className="clinova-desktop-badge">
                     <RoleBadge role={currentUser.role} />
                   </div>
-                  <select
-                    aria-label="Select Active Clinical Role"
-                    value={currentUser.id}
-                    onChange={(e) => handleRoleChange(e.target.value)}
+                  <span
                     className="hide-mobile"
                     style={{
-                      fontSize: "0.75rem",
+                      fontSize: "0.8125rem",
                       fontWeight: 600,
-                      padding: "4px 8px",
-                      borderRadius: "var(--clinova-radius-md)",
-                      border: "1px solid var(--clinova-border-subtle)",
-                      backgroundColor: "var(--clinova-surface)",
-                      color: "var(--clinova-text-primary)",
-                      cursor: "pointer",
-                      maxWidth: 160,
+                      maxWidth: 130,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
                       textOverflow: "ellipsis",
+                      color: "var(--clinova-text-primary)",
                     }}
+                    title={currentUser.full_name}
                   >
-                    {personas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name} ({p.role})
-                      </option>
-                    ))}
-                  </select>
+                    {currentUser.full_name}
+                  </span>
                   <button
                     onClick={handleLogout}
                     className="clinova-icon-btn"
@@ -459,29 +450,6 @@ export const TopBar: React.FC<TopBarProps> = ({
                     <LogIn style={{ width: 14, height: 14 }} aria-hidden="true" />
                     <span>Sign In</span>
                   </Link>
-                  <select
-                    aria-label="Demo Persona Quick Select"
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) handleRoleChange(e.target.value);
-                    }}
-                    className="select hide-mobile"
-                    style={{
-                      height: 30,
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      padding: "2px 24px 2px 8px",
-                      maxWidth: 130,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <option value="" disabled>Demo Persona</option>
-                    {personas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name} ({p.role})
-                      </option>
-                    ))}
-                  </select>
                 </div>
               )}
             </div>
@@ -657,7 +625,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               }}
             >
               <span className="section-title">
-                {currentUser ? "Active Session" : "Demo Persona Quick Switch"}
+                {currentUser ? "Active Session" : "Staff Authentication"}
               </span>
               {currentUser ? (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -678,25 +646,6 @@ export const TopBar: React.FC<TopBarProps> = ({
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <select
-                    aria-label="Mobile Demo Persona Quick Select"
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setMobileMenuOpen(false);
-                        handleRoleChange(e.target.value);
-                      }
-                    }}
-                    className="select"
-                    style={{ height: 36, fontSize: "0.8125rem" }}
-                  >
-                    <option value="" disabled>Select Demo Persona to Explore</option>
-                    {personas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name} ({p.role})
-                      </option>
-                    ))}
-                  </select>
                   <Link
                     href="/login"
                     onClick={() => setMobileMenuOpen(false)}

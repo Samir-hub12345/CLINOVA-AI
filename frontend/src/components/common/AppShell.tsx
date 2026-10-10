@@ -8,6 +8,7 @@ import { Footer } from "./Footer";
 import { ReferralDrawer } from "@/components/drawers/ReferralDrawer";
 import { FacilityDrawer } from "@/components/drawers/FacilityDrawer";
 import { SystemAuditDrawer } from "@/components/drawers/SystemAuditDrawer";
+import { FloatingPersonaSwitcher } from "./FloatingPersonaSwitcher";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -59,6 +60,9 @@ export const AppShell: React.FC<AppShellProps> = ({
         isOpen={isSystemOpen}
         onClose={() => setIsSystemOpen(false)}
       />
+
+      {/* 7. Floating Demo Persona Quick Switcher (Bottom-Right Fixed) */}
+      <FloatingPersonaSwitcher />
     </div>
   );
 };

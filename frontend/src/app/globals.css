@@ -1838,3 +1838,44 @@ p {
 
 
 
+
+
+/* ==========================================================================
+   FLOATING DEMO PERSONA SWITCHER
+   ========================================================================== */
+@keyframes clinovaFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.clinova-floating-trigger-btn:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 8px 24px -2px rgba(0, 0, 0, 0.22), 0 3px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+.clinova-floating-trigger-btn:active {
+  transform: scale(0.97) !important;
+}
+
+.clinova-persona-option-btn:hover {
+  background-color: var(--clinova-surface-subtle, #f8fafc) !important;
+  border-color: var(--teal-500, #14b8a6) !important;
+  transform: translateX(2px);
+}
+
+@media (max-width: 640px) {
+  .clinova-floating-persona-wrapper {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+  .clinova-floating-card {
+    width: calc(100vw - 32px) !important;
+    max-height: 80vh !important;
+  }
+}
