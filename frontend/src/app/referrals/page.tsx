@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { MOCK_REFERRAL_OPTIONS, MOCK_FACILITIES } from "@/mock/facilities";
 import { Send } from "lucide-react";
 import { RoleGuard } from "@/components/common/RoleGuard";
+import { DownloadReportButton } from "@/components/common/DownloadReportButton";
 
 export default function ReferralsPage() {
   const [selectedCaseId, setSelectedCaseId] = useState("CASE-SYNTH-003");
@@ -155,7 +156,13 @@ export default function ReferralsPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 4 }}>
+            <DownloadReportButton
+              caseId={selectedCaseId}
+              label="Download SBAR Dossier (PDF)"
+              size="md"
+              variant="outline"
+            />
             <Button variant="emergency" size="md" onClick={handleDispatch}>
               <Send style={{ width: 14, height: 14 }} aria-hidden="true" />
               <span>Confirm & Dispatch Transfer</span>

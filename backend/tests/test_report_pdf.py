@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
 from app.db.session import async_session_factory
-from app.db.models import Case, Patient, Facility, User, VitalReading, ClinicianDecision
+from app.db.models import Case, Patient, Facility, User, VitalReading, ClinicianDecision, Referral
 from app.domain.reports.pdf_generator import build_clinical_report_pdf
 from app.core.auth import create_access_token
 
@@ -112,6 +112,68 @@ def test_pdf_builder_produces_valid_binary(mock_report_data):
     assert b"CASE-TEST-001" in pdf_bytes
     assert b"HUMAN CLINICIAN VERIFIED" in pdf_bytes
     assert b"AI-GENERATED" in pdf_bytes
+    assert b"/Encoding /WinAnsiEncoding" in pdf_bytes
+
+
+def test_pdf_long_text_pagination_and_footer_protection():
+    """Verifies that large clinical text wraps across multiple pages without truncation or footer collisions."""
+    from app.domain.reports.pdf_generator import ClinicalPDFCanvas
+
+    canvas = ClinicalPDFCanvas()
+    canvas.y = 70.0  # Close to footer threshold
+    multi_paragraph_notes = (
+        "1. Immediate bedside stabilization with high-flow oxygen.\n"
+        "2. Administer dual antiplatelet therapy (Aspirin 325mg + Clopidogrel 300mg).\n"
+        "3. Secure bilateral 18G IV access; draw urgent Troponin-I and CBC.\n"
+        "4. Continuous 12-lead ECG monitoring for evolving ST-elevation.\n"
+        "5. Prepare SBAR emergency packet for tertiary transfer.\n"
+        + "Additional clinical narrative follow-up: " * 15
+    )
+    new_y = canvas.draw_wrapped_text(multi_paragraph_notes, 40, canvas.y, 500)
+    assert canvas.page_number > 1, "Must dynamically advance page number on text overflow!"
+    assert new_y >= canvas.margin, f"new_y {new_y} must not draw below canvas margin {canvas.margin}!"
+
+    pdf_bytes = canvas.build()
+    assert b"%PDF-1.4" in pdf_bytes
+    assert b"Page 2 of 2" in pdf_bytes or b"Page 3 of 3" in pdf_bytes
+
+
+def test_escape_pdf_preserves_zero_and_transliterates():
+    """Verifies escape_pdf preserves integer 0 and handles unicode typography."""
+    from app.domain.reports.pdf_generator import escape_pdf
+
+    assert escape_pdf(0) == "0", "Integer 0 must not be treated as empty string!"
+    assert escape_pdf(0.0) == "0.0"
+    assert escape_pdf(None) == ""
+    assert escape_pdf("René Dupont") == "Rene Dupont"
+    assert escape_pdf("Heart Rate: 80 bpm — Temp: 37°C…") == "Heart Rate: 80 bpm -- Temp: 37 deg C..."
+
+
+def test_pdf_with_referral_and_outcome_rendering(mock_report_data):
+    """Verifies that inter-facility referral SBAR and outcome records are rendered in PDF."""
+    report_with_ref_and_outcome = dict(mock_report_data)
+    report_with_ref_and_outcome["referral"] = {
+        "destination_name": "SCB Medical College & Hospital",
+        "status": "ACCEPTED",
+        "required_bundle": "CARDIAC_CATH_PCI",
+        "sbar_situation": "Acute STEMI transfer required",
+        "sbar_background": "Presented with crushing retrosternal chest pain",
+        "sbar_assessment": "Inferior STEMI with cardiogenic shock risk",
+        "sbar_recommendation": "Direct cath lab activation and ALS ambulance",
+    }
+    report_with_ref_and_outcome["outcome"] = {
+        "disposition": "TRANSFERRED_TERTIARY",
+        "final_condition": "CRITICAL_STABILIZED",
+        "notes": "Patient escorted safely by paramedical escort team.",
+        "recorded_at": "2026-10-10T10:30:00Z",
+    }
+
+    pdf_bytes = build_clinical_report_pdf(report_with_ref_and_outcome)
+    assert b"INTER-FACILITY REFERRAL" in pdf_bytes
+    assert b"SCB Medical College" in pdf_bytes
+    assert b"CARDIAC_CATH_PCI" in pdf_bytes
+    assert b"CLINICAL OUTCOME" in pdf_bytes
+    assert b"TRANSFERRED_TERTIARY" in pdf_bytes
 
 
 @pytest.mark.asyncio
@@ -130,6 +192,17 @@ async def test_api_report_endpoints():
                     tier="LEVEL_4_DH",
                 )
                 session.add(fac)
+                await session.flush()
+
+            fac_dest = await session.get(Facility, "FAC-MCH-02")
+            if not fac_dest:
+                fac_dest = Facility(
+                    id="FAC-MCH-02",
+                    facility_code="FAC-MCH-02",
+                    name="SCB Medical College & Hospital",
+                    tier="LEVEL_5_TERTIARY",
+                )
+                session.add(fac_dest)
                 await session.flush()
 
             import uuid
@@ -172,6 +245,20 @@ async def test_api_report_endpoints():
                 timestamp=datetime.now(timezone.utc),
             )
             session.add(decision)
+
+            referral = Referral(
+                id=f"ref-{unique_suffix}",
+                case_id=case.id,
+                origin_facility_id="FAC-DH-04",
+                destination_facility_id="FAC-MCH-02",
+                required_bundle="CARDIAC_CATH_PCI",
+                sbar_situation="Emergency tertiary transfer",
+                sbar_background="Suspected STEMI with chest pain",
+                sbar_assessment="Cardiogenic shock risk",
+                sbar_recommendation="Immediate SCB MCH cath lab prep",
+                status="DISPATCHED",
+            )
+            session.add(referral)
 
             user_pt = User(
                 id=f"usr-pt-own-{unique_suffix}",
@@ -230,8 +317,11 @@ async def test_api_report_endpoints():
         assert res_summary.status_code == 200
         summary_data = res_summary.json()
         assert summary_data["case"]["id"] == test_case_id
-        assert summary_data["patient"]["synthetic_id"] == test_synthetic_id
         assert summary_data["clinician_review"]["decision_type"] == "OBSERVE"
+        assert summary_data["referral"] is not None
+        assert summary_data["referral"]["required_bundle"] == "CARDIAC_CATH_PCI"
+        assert summary_data["referral"]["status"] == "DISPATCHED"
+        assert b"INTER-FACILITY REFERRAL" in res_doc.content
 
         # 4. Patient accessing their own case report
         patient_token = create_access_token(

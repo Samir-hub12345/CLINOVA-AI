@@ -17,6 +17,7 @@ import { SearchField } from "@/components/ui/FormControls";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Button } from "@/components/ui/Button";
 import { LoadingState, EmptyState } from "@/components/ui/States";
+import { DownloadReportButton } from "@/components/common/DownloadReportButton";
 
 export const NurseTriageQueue: React.FC = () => {
   const [queueData, setQueueData] = useState<QueueResponse | null>(null);
@@ -355,14 +356,22 @@ export const NurseTriageQueue: React.FC = () => {
 
                   {/* Review Action */}
                   <td style={{ textAlign: "right" }}>
-                    <Link
-                      href={`/staff/cases/${item.case_id}`}
-                      className="clinova-btn clinova-btn-secondary clinova-btn-sm"
-                      style={{ textDecoration: "none" }}
-                    >
-                      <span>Examine</span>
-                      <ArrowRight style={{ width: 12, height: 12 }} aria-hidden="true" />
-                    </Link>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+                      <DownloadReportButton
+                        caseId={item.case_id}
+                        label="Report PDF"
+                        size="sm"
+                        variant="secondary"
+                      />
+                      <Link
+                        href={`/staff/cases/${item.case_id}`}
+                        className="clinova-btn clinova-btn-secondary clinova-btn-sm"
+                        style={{ textDecoration: "none" }}
+                      >
+                        <span>Examine</span>
+                        <ArrowRight style={{ width: 12, height: 12 }} aria-hidden="true" />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               );

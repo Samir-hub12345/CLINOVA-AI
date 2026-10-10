@@ -11,16 +11,27 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
 
-def escape_pdf(text: str) -> str:
+import unicodedata
+
+
+def escape_pdf(text: Any) -> str:
     """Escapes special characters and sanitizes text to ASCII Latin-1 compatible form."""
-    if not text:
+    if text is None:
         return ""
     text = str(text)
+    if not text:
+        return ""
     text = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-    text = text.replace("—", "--").replace("–", "-").replace("•", "*")
+    text = text.replace("—", "--").replace("–", "-").replace("•", "*").replace("…", "...")
     text = text.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
-    text = text.replace("°", " deg ").replace("±", "+/-")
+    text = text.replace("°", " deg ").replace("±", "+/-").replace("\u00a0", " ")
     text = text.replace("\r", " ").replace("\n", " ")
+
+    # Decompose unicode accents to base ASCII characters (e.g. é -> e)
+    normalized = unicodedata.normalize("NFKD", text)
+    ascii_clean = "".join(c if ord(c) < 128 else "" for c in normalized)
+    if ascii_clean.strip():
+        return ascii_clean
     return "".join(c if ord(c) < 128 else "?" for c in text)
 
 
@@ -39,16 +50,15 @@ class ClinicalPDFCanvas:
 
     def new_page(self):
         """Flushes the current page commands and opens a new page canvas."""
-        if self.current_commands:
-            self.pages.append("\n".join(self.current_commands))
-            self.current_commands = []
+        self.pages.append("\n".join(self.current_commands))
+        self.current_commands = []
         self.page_number += 1
-        self.y = self.page_height - self.margin
+        self.y = self.page_height - self.margin - 15
         self._draw_page_header()
 
     def check_space(self, required_height: float):
         """Ensures enough vertical space exists; otherwise creates a new page."""
-        if self.y - required_height < self.margin + 30:
+        if self.y - required_height < self.margin + 35:
             self.new_page()
 
     def _draw_page_header(self):
@@ -129,7 +139,7 @@ class ClinicalPDFCanvas:
 
     def draw_wrapped_text(
         self,
-        text: str,
+        text: Any,
         x: float,
         start_y: float,
         max_width: float,
@@ -137,43 +147,61 @@ class ClinicalPDFCanvas:
         size: float = 9.5,
         line_height: float = 13.0,
         rgb: tuple = (0.2, 0.2, 0.2),
-        max_lines: int = 10,
+        max_lines: Optional[int] = None,
     ) -> float:
-        """Wraps text within max_width and returns the resulting y position."""
-        words = text.split()
-        if not words:
+        """Wraps text within max_width, gracefully paginating across pages if space runs out."""
+        if text is None:
+            return start_y
+        str_text = str(text)
+        if not str_text.strip():
             return start_y
 
-        # Rough average character width estimation for Helvetica
+        paragraphs = str_text.split("\n")
+        lines = []
+
         char_w = size * 0.52
         chars_per_line = max(10, int(max_width / char_w))
 
-        lines = []
-        current_line = []
-        current_len = 0
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                lines.append("")
+                continue
+            words = para.split()
+            current_line = []
+            current_len = 0
+            for w in words:
+                if current_len + len(w) + (1 if current_line else 0) <= chars_per_line:
+                    current_line.append(w)
+                    current_len += len(w) + (1 if len(current_line) > 1 else 0)
+                else:
+                    if current_line:
+                        lines.append(" ".join(current_line))
+                    current_line = [w]
+                    current_len = len(w)
+            if current_line:
+                lines.append(" ".join(current_line))
 
-        for w in words:
-            if current_len + len(w) + 1 <= chars_per_line:
-                current_line.append(w)
-                current_len += len(w) + 1
-            else:
-                if current_line:
-                    lines.append(" ".join(current_line))
-                current_line = [w]
-                current_len = len(w)
-        if current_line:
-            lines.append(" ".join(current_line))
+        if max_lines is not None and max_lines > 0:
+            lines = lines[:max_lines]
 
         cur_y = start_y
-        for l in lines[:max_lines]:
+        for l in lines:
+            if not l:
+                cur_y -= (line_height * 0.5)
+                continue
+            if cur_y - line_height < self.margin + 35:
+                self.new_page()
+                cur_y = self.y
             self.draw_text(l, x, cur_y, font=font, size=size, rgb=rgb)
             cur_y -= line_height
 
+        self.y = cur_y
         return cur_y
 
     def build(self) -> bytes:
         """Compiles all accumulated pages into a valid binary PDF-1.4 file."""
-        if self.current_commands:
+        if self.current_commands or not self.pages:
             self.pages.append("\n".join(self.current_commands))
             self.current_commands = []
 
@@ -221,9 +249,9 @@ class ClinicalPDFCanvas:
             )
             objects.append(stream_obj)
 
-        objects.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-        objects.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
-        objects.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>")
+        objects.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
+        objects.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>")
+        objects.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>")
 
         out = io.BytesIO()
         out.write(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
@@ -488,7 +516,70 @@ def build_clinical_report_pdf(report: Dict[str, Any]) -> bytes:
         size=7.5,
         rgb=(0.65, 0.2, 0.05),
     )
-    canvas.y -= 38
+    canvas.y -= 14
+
+    # Section: Inter-Facility Referral & SBAR Transfer (when present)
+    ref = report.get("referral")
+    if ref:
+        canvas.check_space(80)
+        canvas.draw_text("7. INTER-FACILITY REFERRAL & SBAR TRANSFER DOSSIER", m, canvas.y, font="F2", size=10, rgb=(0.04, 0.16, 0.31))
+        canvas.draw_line(m, canvas.y - 3, m + w, canvas.y - 3, stroke_rgb=(0.2, 0.45, 0.65), width=1)
+        canvas.y -= 14
+
+        ref_dest = ref.get("destination_name", ref.get("destination_facility_id", "Tertiary Referral Center"))
+        ref_status = ref.get("status", "REQUESTED")
+        ref_bundle = ref.get("required_bundle", "EMERGENCY_TRANSFER")
+
+        status_color = (0.05, 0.45, 0.2) if ref_status in ["ACCEPTED", "DISPATCHED", "COMPLETED"] else (0.8, 0.45, 0.05)
+        canvas.draw_rect(m, canvas.y - 18, w, 18, fill_rgb=(0.95, 0.97, 1.0), stroke_rgb=(0.8, 0.88, 0.95), line_width=0.8)
+        canvas.draw_text(f"Target: {ref_dest} | Protocol: {ref_bundle}", m + 8, canvas.y - 13, font="F2", size=8.5, rgb=(0.04, 0.16, 0.31))
+        canvas.draw_rect(m + w - 85, canvas.y - 16, 75, 14, fill_rgb=status_color)
+        canvas.draw_text(ref_status, m + w - 80, canvas.y - 11, font="F2", size=7.5, rgb=(1, 1, 1))
+        canvas.y -= 24
+
+        sbar_s = ref.get("sbar_situation")
+        sbar_b = ref.get("sbar_background")
+        sbar_a = ref.get("sbar_assessment")
+        sbar_r = ref.get("sbar_recommendation")
+
+        if sbar_s or sbar_b or sbar_a or sbar_r:
+            canvas.draw_text("SBAR Handoff Communication:", m + 8, canvas.y, font="F2", size=8.5, rgb=(0.2, 0.2, 0.2))
+            canvas.y -= 11
+            if sbar_s:
+                canvas.draw_text("[S] Situation:", m + 16, canvas.y, font="F2", size=8, rgb=(0.1, 0.2, 0.35))
+                canvas.y = canvas.draw_wrapped_text(sbar_s, m + 75, canvas.y, w - 95, font="F1", size=8, line_height=11)
+            if sbar_b:
+                canvas.draw_text("[B] Background:", m + 16, canvas.y, font="F2", size=8, rgb=(0.1, 0.2, 0.35))
+                canvas.y = canvas.draw_wrapped_text(sbar_b, m + 75, canvas.y, w - 95, font="F1", size=8, line_height=11)
+            if sbar_a:
+                canvas.draw_text("[A] Assessment:", m + 16, canvas.y, font="F2", size=8, rgb=(0.1, 0.2, 0.35))
+                canvas.y = canvas.draw_wrapped_text(sbar_a, m + 75, canvas.y, w - 95, font="F1", size=8, line_height=11)
+            if sbar_r:
+                canvas.draw_text("[R] Recommendation:", m + 16, canvas.y, font="F2", size=8, rgb=(0.1, 0.2, 0.35))
+                canvas.y = canvas.draw_wrapped_text(sbar_r, m + 75, canvas.y, w - 95, font="F1", size=8, line_height=11)
+        canvas.y -= 8
+
+    # Section: Clinical Outcome & Disposition (when present)
+    outcome = report.get("outcome")
+    if outcome:
+        canvas.check_space(60)
+        canvas.draw_text("8. CLINICAL OUTCOME & DISPOSITION RECORD", m, canvas.y, font="F2", size=10, rgb=(0.04, 0.16, 0.31))
+        canvas.draw_line(m, canvas.y - 3, m + w, canvas.y - 3, stroke_rgb=(0.2, 0.45, 0.65), width=1)
+        canvas.y -= 14
+
+        disp = outcome.get("disposition", "UNKNOWN")
+        cond = outcome.get("final_condition", "STABLE")
+        notes = outcome.get("notes") or outcome.get("recommendation") or "Discharge summary recorded."
+        rec_time = (outcome.get("recorded_at") or "")[:19]
+
+        canvas.draw_rect(m, canvas.y - 20, w, 20, fill_rgb=(0.96, 0.98, 0.96), stroke_rgb=(0.8, 0.9, 0.8), line_width=0.8)
+        canvas.draw_text(f"Disposition: {disp} | Final Condition: {cond} | Recorded: {rec_time}", m + 8, canvas.y - 14, font="F2", size=8.5, rgb=(0.05, 0.4, 0.15))
+        canvas.y -= 26
+
+        canvas.draw_text("Outcome & Transition Notes:", m + 8, canvas.y, font="F2", size=8.5, rgb=(0.2, 0.2, 0.2))
+        canvas.y -= 11
+        canvas.y = canvas.draw_wrapped_text(notes, m + 16, canvas.y, w - 32, font="F1", size=8.5, line_height=11.5)
+        canvas.y -= 8
 
     # Cryptographic Provenance Ledger Signature
     raw_hash_material = f"{p.get('synthetic_id')}:{c.get('id')}:{now_str}:{c.get('status')}"

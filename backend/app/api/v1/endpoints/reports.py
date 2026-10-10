@@ -45,6 +45,9 @@ async def assemble_case_report_payload(case_id: str, db: AsyncSession, actor: Ac
             selectinload(Case.vitals_list),
             selectinload(Case.evidence_records),
             selectinload(Case.decisions),
+            selectinload(Case.referral),
+            selectinload(Case.outcome),
+            selectinload(Case.consent),
         )
     )
     res = await db.execute(stmt)
@@ -167,6 +170,38 @@ async def assemble_case_report_payload(case_id: str, db: AsyncSession, actor: Ac
         ),
     }
 
+    # 10. Inter-Facility Referral Record (if present)
+    ref_dict = None
+    if case.referral:
+        ref_dict = {
+            "id": case.referral.id,
+            "origin_facility_id": case.referral.origin_facility_id,
+            "destination_facility_id": case.referral.destination_facility_id,
+            "destination_name": "SCB Medical College & Hospital (Cuttack)" if "MCH" in (case.referral.destination_facility_id or "") else f"Facility {case.referral.destination_facility_id}",
+            "required_bundle": case.referral.required_bundle,
+            "status": case.referral.status,
+            "sbar_situation": case.referral.sbar_situation,
+            "sbar_background": case.referral.sbar_background,
+            "sbar_assessment": case.referral.sbar_assessment,
+            "sbar_recommendation": case.referral.sbar_recommendation,
+            "created_at": case.referral.created_at.isoformat() if case.referral.created_at else None,
+        }
+
+    # 11. Clinical Outcome & Disposition (if present)
+    outcome_dict = None
+    if case.outcome:
+        outcome_dict = {
+            "id": case.outcome.id,
+            "disposition": case.outcome.disposition,
+            "final_condition": case.outcome.final_condition,
+            "actual_action": case.outcome.actual_action,
+            "recommendation": case.outcome.recommendation,
+            "outcome_status": case.outcome.outcome_status,
+            "notes": case.outcome.notes,
+            "recorded_by": case.outcome.recorded_by,
+            "recorded_at": case.outcome.recorded_at.isoformat() if case.outcome.recorded_at else None,
+        }
+
     return {
         "case": case_dict,
         "patient": patient_dict,
@@ -177,6 +212,8 @@ async def assemble_case_report_payload(case_id: str, db: AsyncSession, actor: Ac
         "safety_alerts": safety_alerts,
         "clinician_review": latest_decision or {},
         "care_plan": care_plan,
+        "referral": ref_dict,
+        "outcome": outcome_dict,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 
