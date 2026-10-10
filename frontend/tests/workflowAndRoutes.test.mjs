@@ -11,6 +11,13 @@
  */
 
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const srcDir = path.resolve(__dirname, "../src");
 
 // 1. Setup mock Web Storage & DOM environment
 class MockStorage {
@@ -379,5 +386,53 @@ console.log("--- Starting CLINOVA Master Workflow, Route & Interaction Test Suit
   console.log("✓ Test 13: Robustness - Dual storage cache fallback successfully verified");
 }
 
-console.log("--- All Master Workflow, Route & Interaction Tests Passed (13/13) ---");
+// Test 14: Public Landing Page Role Segregation & Architectural Pillars
+{
+  const pageContent = fs.readFileSync(path.join(srcDir, "app/page.tsx"), "utf8");
+  // 1. Operational data must NOT be on public landing page
+  assert.ok(!pageContent.includes("TodayScheduleWidget"), "Landing page must not contain TodayScheduleWidget");
+  assert.ok(!pageContent.includes("ClinicalReviewQueueWidget"), "Landing page must not contain ClinicalReviewQueueWidget");
+  assert.ok(!pageContent.includes("RecentActivityWidget"), "Landing page must not contain RecentActivityWidget");
+  assert.ok(!pageContent.includes("AIWorkflowSummaryWidget"), "Landing page must not contain AIWorkflowSummaryWidget");
+  assert.ok(!pageContent.includes("Manoj Das"), "Landing page must not hardcode patient schedules");
+
+  // 2. High-impact public landing page content must be present
+  assert.ok(pageContent.includes("Less paperwork"), "Hero headline must be present");
+  assert.ok(pageContent.includes("Continuous Care Intelligence"), "Continuous care badge must be present");
+  assert.ok(pageContent.includes("THE CONTINUOUS CLINICAL WORKFLOW"), "6-stage clinical continuum must be present");
+  assert.ok(pageContent.includes("THE 12-STAGE MASTER CASE CONTINUOUS LOOP"), "12-stage Master Case loop must be present");
+  assert.ok(pageContent.includes("Six Distinct Role Experiences"), "Role ingress section must be present");
+  assert.ok(pageContent.includes("Paschim Banga Doctrine"), "Constitutional emergency doctrine must be present");
+  assert.ok(pageContent.includes("Zero-PII & Statutory Compliance"), "DPDP Act compliance pillar must be present");
+
+  console.log("✓ Test 14: Public Landing Page verifies clean role segregation & architectural pillars");
+}
+
+// Test 15: Operational Clinical Dashboards Role Placement
+{
+  const staffContent = fs.readFileSync(path.join(srcDir, "app/staff/page.tsx"), "utf8");
+  const reviewContent = fs.readFileSync(path.join(srcDir, "app/staff/review/page.tsx"), "utf8");
+  const receptionContent = fs.readFileSync(path.join(srcDir, "app/staff/reception/page.tsx"), "utf8");
+  const systemContent = fs.readFileSync(path.join(srcDir, "app/system/page.tsx"), "utf8");
+
+  // Staff Gateway has Schedule, Review Queue & AI Workflow Summary
+  assert.ok(staffContent.includes("TodayScheduleWidget"), "Staff gateway must embed TodayScheduleWidget");
+  assert.ok(staffContent.includes("ClinicalReviewQueueWidget"), "Staff gateway must embed ClinicalReviewQueueWidget");
+  assert.ok(staffContent.includes("AIWorkflowSummaryWidget"), "Staff gateway must embed AIWorkflowSummaryWidget");
+
+  // Review Workspace has Review Queue & AI Workflow Summary
+  assert.ok(reviewContent.includes("ClinicalReviewQueueWidget"), "Review page must embed ClinicalReviewQueueWidget");
+  assert.ok(reviewContent.includes("AIWorkflowSummaryWidget"), "Review page must embed AIWorkflowSummaryWidget");
+
+  // Reception Workspace has Today's Appointments tab with TodayScheduleWidget
+  assert.ok(receptionContent.includes("TodayScheduleWidget"), "Reception page must embed TodayScheduleWidget");
+  assert.ok(receptionContent.includes("appointments={receptionAppointments}"), "Reception page must pass registered appointments into TodayScheduleWidget");
+
+  // System Workspace has Recent Activity Audit widget
+  assert.ok(systemContent.includes("RecentActivityWidget"), "System page must embed RecentActivityWidget");
+
+  console.log("✓ Test 15: Role-specific operational dashboards verify authentic widget placement");
+}
+
+console.log("--- All Master Workflow, Route & Interaction Tests Passed (15/15) ---");
 

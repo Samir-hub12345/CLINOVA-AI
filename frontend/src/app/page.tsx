@@ -410,10 +410,13 @@ export default function HomePage() {
                 <li>Strict human clinician decision gate</li>
               </ul>
             </div>
-            <div className="card-footer">
-              <Link href="/staff/cases/CASE-SYNTH-003" className="btn btn-accent btn-sm btn-block">
-                <span>Access Doctor Workbench</span>
+            <div className="card-footer" style={{ display: "flex", gap: 8 }}>
+              <Link href="/staff/cases/CASE-SYNTH-003" className="btn btn-accent btn-sm" style={{ flex: 1 }}>
+                <span>Doctor Workbench</span>
                 <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+              </Link>
+              <Link href="/staff/review" className="btn btn-ghost btn-sm" style={{ border: "1px solid var(--border-strong)" }}>
+                <span>Review Queue</span>
               </Link>
             </div>
           </div>

@@ -12,7 +12,7 @@ import { ReviewQueueData } from "@/types";
 import { LoadingState, EmptyState } from "@/components/ui/States";
 import { ArrowRight, Stethoscope, Sparkles, CheckCircle2 } from "lucide-react";
 import { RoleGuard } from "@/components/common/RoleGuard";
-import { AIWorkflowSummaryWidget } from "@/components/dashboard";
+import { AIWorkflowSummaryWidget, ClinicalReviewQueueWidget } from "@/components/dashboard";
 
 export default function StaffReviewPage() {
   const [queueData, setQueueData] = useState<ReviewQueueData | null>(null);
@@ -62,35 +62,41 @@ export default function StaffReviewPage() {
           }}
           className="clinova-dash-grid"
         >
-          <div className="card">
-            <div className="card-header">
-              <div className="row gap-2">
-                <Stethoscope style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
-                <h2 style={{ margin: 0, fontSize: "1.125rem", fontWeight: 700 }}>
-                  Attending Physician Oversight Gate
-                </h2>
-              </div>
-              <span className="badge badge-warning">{casesNeedingReview.length} Pending Sign-off</span>
-            </div>
-            <div className="card-body stack gap-3">
-              <p className="small subtle" style={{ margin: 0 }}>
-                Every clinical synthesis, composite risk score, and care pathway formulated by AI requires
-                direct physician verification and authoritative digital signature per NMC 2023 regulations.
-              </p>
-              <div className="row gap-3 wrap">
-                <div className="row gap-2 small">
-                  <CheckCircle2 style={{ width: 16, height: 16, color: "var(--success)" }} aria-hidden="true" />
-                  <span>Human-in-the-loop clinical non-delegation</span>
+          <div className="stack gap-4">
+            <div className="card">
+              <div className="card-header">
+                <div className="row gap-2">
+                  <Stethoscope style={{ width: 18, height: 18, color: "var(--teal-600)" }} aria-hidden="true" />
+                  <h2 style={{ margin: 0, fontSize: "1.125rem", fontWeight: 700 }}>
+                    Attending Physician Oversight Gate
+                  </h2>
                 </div>
-                <div className="row gap-2 small">
-                  <Sparkles style={{ width: 16, height: 16, color: "var(--teal-600)" }} aria-hidden="true" />
-                  <span>Deterministic safety score grounding</span>
+                <span className="badge badge-warning">{casesNeedingReview.length} Pending Sign-off</span>
+              </div>
+              <div className="card-body stack gap-3">
+                <p className="small subtle" style={{ margin: 0 }}>
+                  Every clinical synthesis, composite risk score, and care pathway formulated by AI requires
+                  direct physician verification and authoritative digital signature per NMC 2023 regulations.
+                </p>
+                <div className="row gap-3 wrap">
+                  <div className="row gap-2 small">
+                    <CheckCircle2 style={{ width: 16, height: 16, color: "var(--success)" }} aria-hidden="true" />
+                    <span>Human-in-the-loop clinical non-delegation</span>
+                  </div>
+                  <div className="row gap-2 small">
+                    <Sparkles style={{ width: 16, height: 16, color: "var(--teal-600)" }} aria-hidden="true" />
+                    <span>Deterministic safety score grounding</span>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <ClinicalReviewQueueWidget showFooter={false} />
           </div>
 
-          <AIWorkflowSummaryWidget showReviewButton={false} awaitingCount={casesNeedingReview.length || 2} />
+          <div className="stack gap-4">
+            <AIWorkflowSummaryWidget showReviewButton={false} awaitingCount={casesNeedingReview.length || 2} />
+          </div>
         </div>
 
         {/* Primary Case Review Worklist */}

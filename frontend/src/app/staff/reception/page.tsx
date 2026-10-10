@@ -240,6 +240,22 @@ export default function ReceptionWorkstationPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const receptionAppointments = records.map((rec, idx) => ({
+    id: rec.id || `rec-apt-${idx}`,
+    time: rec.registered_at.includes("AM") || rec.registered_at.includes("PM")
+      ? rec.registered_at.replace("Today, ", "")
+      : "09:00",
+    patient: rec.name,
+    patientId: rec.id.startsWith("QUEUE-")
+      ? rec.id.replace("QUEUE-", "")
+      : "CASE-SYNTH-003",
+    type: rec.pathway === "EMERGENCY" ? `[Emergency Fast-Track] ${rec.chief_complaint}` : rec.chief_complaint,
+    clinician: rec.pathway === "EMERGENCY" ? "Emergency Physician (On Duty)" : "OPD Attending Physician",
+    status: (rec.status === "In Review" ? "In progress" : rec.status === "Completed" ? "Completed" : "Scheduled") as "In progress" | "Completed" | "Scheduled",
+    mine: true,
+    avatar: rec.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "PT",
+  }));
+
   return (
     <RoleGuard
       allowedRoles={["RECEPTIONIST", "NURSE", "CLINICIAN", "DOCTOR", "FACILITY_ADMIN", "SYSTEM_ADMIN"]}
@@ -358,6 +374,7 @@ export default function ReceptionWorkstationPage() {
           >
             <Calendar style={{ width: 16, height: 16 }} aria-hidden="true" />
             <span>Today&apos;s Appointments</span>
+            <span className="count">{receptionAppointments.length}</span>
           </button>
         </div>
 
@@ -822,7 +839,7 @@ export default function ReceptionWorkstationPage() {
         {/* TAB 3: TODAY'S APPOINTMENTS & SCHEDULE */}
         {activeTab === "schedule" && (
           <div className="stack gap-4">
-            <TodayScheduleWidget compact={true} />
+            <TodayScheduleWidget appointments={receptionAppointments} compact={true} />
           </div>
         )}
       </div>

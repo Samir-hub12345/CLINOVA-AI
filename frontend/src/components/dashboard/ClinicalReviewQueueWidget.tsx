@@ -58,11 +58,13 @@ export const DEFAULT_TASK_QUEUE_ITEMS: TaskQueueItem[] = [
 interface ClinicalReviewQueueWidgetProps {
   tasks?: TaskQueueItem[];
   badgeText?: string;
+  showFooter?: boolean;
 }
 
 export const ClinicalReviewQueueWidget: React.FC<ClinicalReviewQueueWidgetProps> = ({
   tasks = DEFAULT_TASK_QUEUE_ITEMS,
   badgeText = "4 Need Attention",
+  showFooter = true,
 }) => {
   return (
     <div className="card" aria-labelledby="tasks-heading">
@@ -109,12 +111,14 @@ export const ClinicalReviewQueueWidget: React.FC<ClinicalReviewQueueWidgetProps>
           })}
         </ul>
       </div>
-      <div className="card-footer">
-        <Link href="/staff/review" className="btn btn-secondary btn-sm btn-block">
-          <span>View Full Attending Review Worklist</span>
-          <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-        </Link>
-      </div>
+      {showFooter && (
+        <div className="card-footer">
+          <Link href="/staff/review" className="btn btn-secondary btn-sm btn-block">
+            <span>View Full Attending Review Worklist</span>
+            <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+          </Link>
+        </div>
+      )}
     </div>
   );
 };

@@ -143,51 +143,66 @@ export const TodayScheduleWidget: React.FC<TodayScheduleWidgetProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredAppointments.map((apt) => (
-              <tr
-                key={apt.id}
-                className="clickable"
-                onClick={() => {
-                  router.push(`/staff/cases/${apt.patientId}`);
-                }}
-              >
-                <td data-label="Time" className="tnum medium">
-                  {apt.time}
-                </td>
-                <td className="primary-cell">
-                  <div className="row gap-2">
-                    <span className="avatar sm">{apt.avatar}</span>
-                    <span className="medium" style={{ color: "var(--navy-900)" }}>
-                      {apt.patient}
-                    </span>
-                    {apt.patientId === "CASE-SYNTH-003" && (
-                      <span className="badge badge-teal">Demo</span>
-                    )}
-                  </div>
-                </td>
-                <td data-label="Type" className="subtle">
-                  {apt.type}
-                </td>
-                {scheduleScope === "all" && (
-                  <td data-label="Clinician" className="subtle">
-                    {apt.clinician}
-                  </td>
-                )}
-                <td data-label="Status">
-                  {renderStatusBadge(apt.status)}
-                </td>
-                <td className="hide-sm" style={{ textAlign: "right" }}>
-                  <Link
-                    href={`/staff/cases/${apt.patientId}`}
-                    className="btn btn-ghost btn-sm"
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`Open record for ${apt.patient}`}
-                  >
-                    <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
-                  </Link>
+            {filteredAppointments.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={scheduleScope === "all" ? 6 : 5}
+                  style={{
+                    textAlign: "center",
+                    padding: "24px 16px",
+                    color: "var(--text-3)",
+                  }}
+                >
+                  No appointments scheduled for this view.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredAppointments.map((apt) => (
+                <tr
+                  key={apt.id}
+                  className="clickable"
+                  onClick={() => {
+                    router.push(`/staff/cases/${apt.patientId}`);
+                  }}
+                >
+                  <td data-label="Time" className="tnum medium">
+                    {apt.time}
+                  </td>
+                  <td className="primary-cell">
+                    <div className="row gap-2">
+                      <span className="avatar sm">{apt.avatar}</span>
+                      <span className="medium" style={{ color: "var(--navy-900)" }}>
+                        {apt.patient}
+                      </span>
+                      {apt.patientId === "CASE-SYNTH-003" && (
+                        <span className="badge badge-teal">Demo</span>
+                      )}
+                    </div>
+                  </td>
+                  <td data-label="Type" className="subtle">
+                    {apt.type}
+                  </td>
+                  {scheduleScope === "all" && (
+                    <td data-label="Clinician" className="subtle">
+                      {apt.clinician}
+                    </td>
+                  )}
+                  <td data-label="Status">
+                    {renderStatusBadge(apt.status)}
+                  </td>
+                  <td className="hide-sm" style={{ textAlign: "right" }}>
+                    <Link
+                      href={`/staff/cases/${apt.patientId}`}
+                      className="btn btn-ghost btn-sm"
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Open record for ${apt.patient}`}
+                    >
+                      <ArrowRight style={{ width: 14, height: 14 }} aria-hidden="true" />
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
