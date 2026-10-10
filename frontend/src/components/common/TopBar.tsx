@@ -147,7 +147,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           }}
         >
           {/* Brand Identity */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
             <Link
               href="/"
               style={{
@@ -155,12 +155,15 @@ export const TopBar: React.FC<TopBarProps> = ({
                 alignItems: "center",
                 gap: 10,
                 textDecoration: "none",
+                flexShrink: 0,
               }}
             >
               <div
                 style={{
                   width: 32,
                   height: 32,
+                  minWidth: 32,
+                  minHeight: 32,
                   borderRadius: "var(--clinova-radius-md)",
                   border: "1px solid var(--clinova-border)",
                   backgroundColor: "var(--clinova-surface-subtle)",
@@ -168,6 +171,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   alignItems: "center",
                   justifyContent: "center",
                   overflow: "hidden",
+                  flexShrink: 0,
                 }}
               >
                 <Image
@@ -175,10 +179,11 @@ export const TopBar: React.FC<TopBarProps> = ({
                   alt="CLINOVA AI Logo"
                   width={28}
                   height={28}
-                  style={{ objectFit: "contain" }}
+                  priority
+                  style={{ objectFit: "contain", width: 28, height: 28 }}
                 />
               </div>
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
                 <span
                   style={{
                     fontSize: "1.0625rem",
@@ -186,7 +191,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                     color: "var(--clinova-text-primary)",
                     letterSpacing: "-0.02em",
                     display: "block",
-                    lineHeight: 1.1,
+                    lineHeight: 1.15,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   CLINOVA AI
@@ -199,6 +205,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     display: "block",
+                    lineHeight: 1.2,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   Continuous Care Intelligence
@@ -212,8 +220,10 @@ export const TopBar: React.FC<TopBarProps> = ({
               style={{
                 display: "none",
                 alignItems: "center",
-                gap: 4,
-                marginLeft: 12,
+                gap: 2,
+                marginLeft: 10,
+                flexShrink: 1,
+                minWidth: 0,
               }}
               className="clinova-desktop-nav"
             >
@@ -225,8 +235,9 @@ export const TopBar: React.FC<TopBarProps> = ({
                     fontSize: "0.8125rem",
                     fontWeight: 600,
                     textDecoration: "none",
-                    padding: "6px 12px",
+                    padding: "5px 9px",
                     borderRadius: "var(--clinova-radius-md)",
+                    whiteSpace: "nowrap",
                     color: isActive(link.href)
                       ? "var(--clinova-accent-text)"
                       : "var(--clinova-text-secondary)",
@@ -246,7 +257,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
 
           {/* Operational Status, Role Switcher & Drawer Triggers */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             {/* Connection Status Indicator */}
             <div className="clinova-desktop-item">
               <ConnectionStatus status="ONLINE" />
@@ -307,6 +318,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                       backgroundColor: "var(--clinova-surface)",
                       color: "var(--clinova-text-primary)",
                       cursor: "pointer",
+                      maxWidth: 180,
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {personas.map((p) => (

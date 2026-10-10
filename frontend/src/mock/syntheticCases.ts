@@ -1,4 +1,4 @@
-import {
+import type {
   CareGraphData,
   QueueItem,
 } from "@/types";

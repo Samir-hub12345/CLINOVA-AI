@@ -5,7 +5,7 @@
  * Zero secrets in browser. Zero false claims of live backend functionality.
  */
 
-import {
+import type {
   Persona,
   QueueItem,
   CareGraphData,
@@ -51,8 +51,9 @@ interface RequestOptions extends RequestInit {
   timeoutMs?: number;
 }
 
-// In-memory token cache for SSR/client runtime
+// In-memory token & user cache for SSR/client runtime
 let inMemoryToken: string | null = null;
+let inMemoryUser: Persona | null = null;
 
 export function getAuthToken(): string | null {
   if (typeof window !== "undefined") {
@@ -66,16 +67,51 @@ export function getAuthToken(): string | null {
   return inMemoryToken;
 }
 
-export function setAuthToken(token: string | null): void {
+export function getStoredUser(): Persona | null {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = sessionStorage.getItem("clinova_user");
+      if (stored) return JSON.parse(stored) as Persona;
+    } catch {
+      // Ignore storage access restrictions
+    }
+  }
+  return inMemoryUser;
+}
+
+export function setAuthToken(token: string | null, user?: Persona | null): void {
+  const previousToken = inMemoryToken;
+  const previousUser = inMemoryUser;
   inMemoryToken = token;
+  if (user !== undefined) {
+    inMemoryUser = user;
+  } else if (!token) {
+    inMemoryUser = null;
+  }
+
   if (typeof window !== "undefined") {
     try {
       if (token) {
         sessionStorage.setItem("clinova_auth_token", token);
+        if (user) {
+          sessionStorage.setItem("clinova_user", JSON.stringify(user));
+        }
       } else {
         sessionStorage.removeItem("clinova_auth_token");
+        sessionStorage.removeItem("clinova_user");
       }
-      window.dispatchEvent(new CustomEvent("clinova_auth_changed", { detail: { token } }));
+
+      // Check if identity or token actually changed to prevent infinite loops
+      const userChanged =
+        user !== undefined &&
+        (previousUser?.id !== inMemoryUser?.id || previousUser?.role !== inMemoryUser?.role);
+      const tokenChanged = token !== previousToken;
+
+      if (tokenChanged || userChanged) {
+        window.dispatchEvent(
+          new CustomEvent("clinova_auth_changed", { detail: { token, user: inMemoryUser } })
+        );
+      }
     } catch {
       // Ignore storage access restrictions
     }
@@ -83,7 +119,11 @@ export function setAuthToken(token: string | null): void {
 }
 
 export function clearAuthToken(): void {
-  setAuthToken(null);
+  const hadToken = !!getAuthToken();
+  setAuthToken(null, null);
+  if (hadToken && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("clinova_session_expired"));
+  }
 }
 
 async function safeFetch<T>(
@@ -115,8 +155,10 @@ async function safeFetch<T>(
 
     if (!res.ok) {
       if (res.status === 401 && typeof window !== "undefined") {
-        clearAuthToken();
-        window.dispatchEvent(new CustomEvent("clinova_session_expired"));
+        const hadToken = !!getAuthToken();
+        if (hadToken) {
+          clearAuthToken();
+        }
       }
       const err = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       const errObj = typeof err.error === "object" && err.error !== null ? (err.error as Record<string, unknown>) : null;
@@ -234,14 +276,21 @@ export async function login(username: string, password?: string): Promise<LoginR
       body: JSON.stringify(payload),
     });
     if (res?.access_token) {
-      setAuthToken(res.access_token);
+      setAuthToken(res.access_token, res.user);
     }
     return res;
   } catch {
     // Offline / demo fallback
-    const matched = FALLBACK_PERSONAS.find((p) => p.username === username || p.id === username) || FALLBACK_PERSONAS[0];
+    const clean = username.trim().toLowerCase();
+    const matched =
+      FALLBACK_PERSONAS.find(
+        (p) =>
+          p.username?.toLowerCase() === clean ||
+          p.id.toLowerCase() === clean ||
+          p.role.toLowerCase() === clean
+      ) || FALLBACK_PERSONAS[0];
     const mockToken = `mock-token-${matched.id}-${Date.now()}`;
-    setAuthToken(mockToken);
+    setAuthToken(mockToken, matched);
     return {
       access_token: mockToken,
       token_type: "bearer",
@@ -272,11 +321,46 @@ export async function getPersonas(): Promise<Persona[]> {
   }
 }
 
-export async function getCurrentUser(): Promise<Persona> {
+export async function getCurrentUser(): Promise<Persona | null> {
+  const token = getAuthToken();
+  // 1. If unauthenticated, return null immediately without making wasteful or loop-inducing network requests
+  if (!token) {
+    return null;
+  }
+
+  const stored = getStoredUser();
+
+  // 2. If running on a synthetic demo token (offline / static mode), resolve the persona immediately
+  if (token.startsWith("mock-token-")) {
+    if (stored) return stored;
+    const matched =
+      FALLBACK_PERSONAS.find((p) => token.includes(p.id) || (p.username && token.includes(p.username))) ||
+      FALLBACK_PERSONAS[0];
+    return matched;
+  }
+
+  // 3. Live backend authentication verification
   try {
-    return await safeFetch<Persona>("/auth/me");
-  } catch {
-    return FALLBACK_PERSONAS[0];
+    const user = await safeFetch<Persona>("/auth/me");
+    if (user && typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("clinova_user", JSON.stringify(user));
+      } catch {
+        // Ignore storage access restrictions
+      }
+    }
+    return user;
+  } catch (error: unknown) {
+    const err = error as { status?: number };
+    if (err?.status === 401) {
+      clearAuthToken();
+      return null;
+    }
+    // If backend unreachable over network, fallback to stored session user rather than forcing Clinician
+    if (stored) {
+      return stored;
+    }
+    return null;
   }
 }
 
@@ -293,13 +377,21 @@ export async function switchPersona(personaId: string): Promise<Persona> {
       body: JSON.stringify({ persona_id: personaId }),
     });
     if (res?.access_token) {
-      setAuthToken(res.access_token);
+      setAuthToken(res.access_token, res.user);
     }
-    return res?.user || (await getCurrentUser());
+    return res?.user || (await getCurrentUser()) || FALLBACK_PERSONAS[0];
   } catch {
-    const found = FALLBACK_PERSONAS.find((p) => p.id === personaId || p.username === personaId);
+    const clean = personaId.trim().toLowerCase();
+    const found =
+      FALLBACK_PERSONAS.find(
+        (p) =>
+          p.id.toLowerCase() === clean ||
+          p.username?.toLowerCase() === clean ||
+          p.role.toLowerCase() === clean
+      );
     const chosen = found || FALLBACK_PERSONAS[0];
-    setAuthToken(`mock-token-${chosen.id}-${Date.now()}`);
+    const mockToken = `mock-token-${chosen.id}-${Date.now()}`;
+    setAuthToken(mockToken, chosen);
     return chosen;
   }
 }

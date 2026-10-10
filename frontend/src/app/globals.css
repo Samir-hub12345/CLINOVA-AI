@@ -784,7 +784,7 @@ p {
   display: inline-flex;
 }
 
-@media (min-width: 860px) {
+@media (min-width: 1040px) {
   .clinova-desktop-nav {
     display: flex !important;
   }

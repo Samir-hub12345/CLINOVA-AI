@@ -1,4 +1,4 @@
-import { AuditLogEntry } from "@/types";
+import type { AuditLogEntry } from "@/types";
 
 /**
  * Immutable Audit Trail Ledger Mock Fixture.

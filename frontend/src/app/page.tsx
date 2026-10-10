@@ -417,7 +417,7 @@ export default function HomePage() {
               <h4 style={{ fontSize: "0.9375rem", margin: 0 }}>Zero-PII & Statutory Compliance</h4>
             </div>
             <p className="xs subtle" style={{ margin: 0, lineHeight: 1.5 }}>
-              Full statutory alignment with India's DPDP Act 2023 and NMC RMP Regulations 2023. Zero personal health identifiers transmitted to commercial third-party APIs.
+              Full statutory alignment with India&apos;s DPDP Act 2023 and NMC RMP Regulations 2023. Zero personal health identifiers transmitted to commercial third-party APIs.
             </p>
           </div>
         </div>

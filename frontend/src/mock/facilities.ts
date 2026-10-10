@@ -1,4 +1,4 @@
-import { Facility, ReferralOption, OrchestrationEvaluation } from "@/types";
+import type { Facility, ReferralOption, OrchestrationEvaluation } from "@/types";
 
 /**
  * Regional Facility Network Mock Fixtures for Odisha Health Network.

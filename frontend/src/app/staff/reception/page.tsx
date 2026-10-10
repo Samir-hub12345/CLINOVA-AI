@@ -302,7 +302,7 @@ export default function ReceptionWorkstationPage() {
         {/* Operational Statistics */}
         <div className="grid grid-4 gap-3">
           <div className="metric-card">
-            <span className="section-title">Today's Registrations</span>
+            <span className="section-title">Today&apos;s Registrations</span>
             <div className="stat-value">{records.length}</div>
             <span className="xs muted">Total recorded walk-ins & transfers</span>
           </div>

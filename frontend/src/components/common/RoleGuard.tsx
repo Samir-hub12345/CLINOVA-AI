@@ -57,7 +57,11 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   }, []);
 
   if (loading) {
-    return <LoadingState message="Verifying clinical role and security authorizations..." />;
+    return (
+      <div style={{ minHeight: "360px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <LoadingState message="Verifying clinical role and security authorizations..." />
+      </div>
+    );
   }
 
   const role = user?.role ? user.role.toUpperCase() : "UNAUTHENTICATED";
@@ -70,15 +74,27 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   );
 
   if (!isAuthorized) {
+    const isUnauth = role === "UNAUTHENTICATED";
     return (
       <UnauthorizedState
-        title={title || "Access Denied: Insufficient Role Authority"}
+        title={
+          isUnauth
+            ? "Authentication Required: Clinical Gateway"
+            : title || "Access Denied: Insufficient Role Authority"
+        }
         message={
-          message ||
-          `Current identity (${user?.full_name || "Unknown"} as ${role}) is not authorized to access this surface.`
+          isUnauth
+            ? "You must sign in with an authorized clinical or administrative account to access this workstation."
+            : message ||
+              `Current identity (${user?.full_name || "Unknown"} as ${role}) is not authorized to access this surface.`
         }
         requiredRoles={allowedRoles}
         currentRole={role}
+        onLoginClick={() => {
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
+          }
+        }}
         onSwitchPersona={() => {
           const selectEl = document.querySelector('select[aria-label="Select Active Clinical Role"]') as HTMLSelectElement | null;
           if (selectEl) {
