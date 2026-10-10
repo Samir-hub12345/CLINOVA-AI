@@ -40,13 +40,11 @@ export default function NotFound() {
           <Home style={{ width: 14, height: 14 }} aria-hidden="true" />
           <span>Return Home</span>
         </Link>
-        <Link href="/staff/triage" className="clinova-btn clinova-btn-primary" style={{ textDecoration: "none" }}>
-          <UserCheck style={{ width: 14, height: 14 }} aria-hidden="true" />
-          <span>Triage Worklist</span>
+        <Link href="/login" className="clinova-btn clinova-btn-primary" style={{ textDecoration: "none" }}>
+          <span>Staff Sign In</span>
         </Link>
-        <Link href="/staff/cases/CASE-SYNTH-003" className="clinova-btn clinova-btn-outline" style={{ textDecoration: "none" }}>
-          <Stethoscope style={{ width: 14, height: 14 }} aria-hidden="true" />
-          <span>Doctor Workbench</span>
+        <Link href="/patient" className="clinova-btn clinova-btn-outline" style={{ textDecoration: "none" }}>
+          <span>Patient Portal</span>
         </Link>
       </div>
     </div>
