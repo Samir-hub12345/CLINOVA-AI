@@ -1642,7 +1642,7 @@ export async function triggerOfflineReconciliation(): Promise<{ synced: number; 
 
 export async function downloadCaseReportPdf(caseId: string): Promise<Blob> {
   const url = `${API_BASE}/cases/${encodeURIComponent(caseId)}/report/pdf`;
-  const token = typeof window !== "undefined" ? localStorage.getItem("clinova_token") : null;
+  const token = getAuthToken();
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -1658,6 +1658,40 @@ export function getCaseReportPdfUrl(caseId: string): string {
 }
 
 export async function getCaseReportSummary(caseId: string): Promise<Record<string, unknown>> {
-  return await safeFetch<Record<string, unknown>>(`/cases/${encodeURIComponent(caseId)}/report/summary`);
+  try {
+    return await safeFetch<Record<string, unknown>>(`/cases/${encodeURIComponent(caseId)}/report/summary`);
+  } catch {
+    const mockCase = getMockCase(caseId);
+    return {
+      case: {
+        id: mockCase.case.id,
+        case_number: mockCase.case.case_number,
+        status: mockCase.case.status,
+        acuity_tier: mockCase.case.acuity_tier,
+        presenting_complaint: mockCase.case.presenting_complaint,
+        primary_syndrome: mockCase.case.primary_syndrome,
+        emergency_active: mockCase.case.emergency_active,
+        created_at: new Date().toISOString(),
+      },
+      patient: {
+        id: "PT-SYN-001",
+        synthetic_id: mockCase.case.patient_synthetic_id,
+        age_bracket: mockCase.case.age_bracket,
+        biological_sex: mockCase.case.biological_sex,
+      },
+      facility: {
+        id: "FAC-DH-04",
+        name: "Cuttack District Headquarters Hospital",
+        tier: "LEVEL_4_DH",
+      },
+      care_plan: {
+        home_instructions: "Maintain oral hydration. Complete prescribed medications as advised.",
+        follow_up: "Review in 5–7 days at Outpatient Desk, Cuttack DHH.",
+        emergency_warning: "If chest pain or severe shortness of breath occurs, call emergency services immediately.",
+      },
+      generated_at: new Date().toISOString(),
+      is_mock: true,
+    };
+  }
 }
 

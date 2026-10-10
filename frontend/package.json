@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:offline": "node --experimental-strip-types tests/offlineQueue.test.mjs",
     "test:auth": "node --loader ./tests/resolve-alias.mjs tests/authStability.test.mjs",
-    "test": "npm run typecheck && npm run test:offline && npm run test:auth"
+    "test:workflow": "node --loader ./tests/resolve-alias.mjs tests/workflowAndRoutes.test.mjs",
+    "test": "npm run typecheck && npm run test:offline && npm run test:auth && npm run test:workflow"
   },
   "dependencies": {
     "clsx": "^2.1.1",
