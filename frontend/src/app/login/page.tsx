@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   LogIn,
@@ -16,81 +17,87 @@ import {
   Activity,
   Eye,
   EyeOff,
+  Mail,
+  KeyRound,
+  FileText,
+  Clock,
+  Sparkles,
+  CheckCircle2,
+  Building,
 } from "lucide-react";
 import { login } from "@/lib/api";
-import { Persona } from "@/types";
 
-const DEMO_PERSONAS = [
+const FLOW_STEPS = [
+  { step: 1, title: "Relevant clinical history is organised", actor: "AI" },
+  { step: 2, title: "Draft clinical summary is prepared", actor: "AI" },
+  { step: 3, title: "Missing information is highlighted", actor: "AI" },
+  { step: 4, title: "Clinician reviews and documents decisions", actor: "Clinician" },
+  { step: 5, title: "Note is approved and signed", actor: "Clinician" },
+  { step: 6, title: "Instructions and follow-up are prepared", actor: "AI • Staff Approved" },
+];
+
+const DEMO_ROLES = [
   {
     id: "clinician",
-    name: "Dr. Priya Sharma",
-    role: "CLINICIAN",
-    desc: "Attending Physician • Doctor Reviewer Workbench",
-    icon: Stethoscope,
-    badge: "badge-teal",
-    target: "/staff/review",
+    label: "Attending Physician (Doctor)",
+    desc: "Doctor Reviewer Workbench & Decision Sign-off",
+    route: "/staff/review",
   },
   {
     id: "nurse",
-    name: "Ananya Patel, RN",
-    role: "NURSE",
-    desc: "Triage Nurse • Vital Signs & Acuity Worklist",
-    icon: UserCheck,
-    badge: "badge-warning",
-    target: "/staff/triage",
+    label: "Triage Nurse (RN)",
+    desc: "Vital Signs & NEWS2 Acuity Worklist",
+    route: "/staff/triage",
   },
   {
     id: "receptionist",
-    name: "Tunde Olawale",
-    role: "RECEPTIONIST",
-    desc: "Medical Receptionist • Patient Registration Desk",
-    icon: UserPlus,
-    badge: "badge-navy",
-    target: "/staff/reception",
+    label: "Medical Receptionist",
+    desc: "Patient Registration & Pathway Routing",
+    route: "/staff/reception",
   },
   {
     id: "facility_admin",
-    name: "Rajesh Mohanty",
-    role: "FACILITY_ADMIN",
-    desc: "Facility Administrator • Bed & ICU Telemetry",
-    icon: Building2,
-    badge: "badge-info",
-    target: "/facilities",
+    label: "Facility Administrator",
+    desc: "Bed Capacity & Regional Telemetry",
+    route: "/facilities",
   },
   {
     id: "sysadmin",
-    name: "System Administrator",
-    role: "SYSTEM_ADMIN",
-    desc: "Platform Admin • Cryptographic Audit Ledger",
-    icon: ShieldCheck,
-    badge: "badge-navy",
-    target: "/system",
+    label: "System Administrator",
+    desc: "Cryptographic Audit Ledger & Sync Health",
+    route: "/system",
   },
   {
     id: "patient",
-    name: "Synthetic Patient",
-    role: "PATIENT",
-    desc: "Patient Portal • Digital Intake & Care Status",
-    icon: Activity,
-    badge: "badge-purple",
-    target: "/patient",
+    label: "Registered Patient",
+    desc: "Patient Portal & Digital Care Tracker",
+    route: "/patient",
   },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
+  const [selectedRole, setSelectedRole] = useState("clinician");
   const [username, setUsername] = useState("clinician");
   const [password, setPassword] = useState("ClinovaDemo2026!");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [forgotModal, setForgotModal] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRoleSelectChange = (roleId: string) => {
+    setSelectedRole(roleId);
+    setUsername(roleId);
+    setPassword("ClinovaDemo2026!");
+    setError(null);
+  };
+
+  const executeLogin = async (userToAuth: string, passToAuth: string) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await login(username, password);
+      const result = await login(userToAuth, passToAuth);
       const role = result.user?.role?.toUpperCase();
 
       if (role === "PATIENT") {
@@ -115,193 +122,348 @@ export default function LoginPage() {
       setError(msg);
     } finally {
       setLoading(false);
+      setSsoLoading(false);
     }
   };
 
-  const handleQuickSelect = (personaId: string, targetPath: string) => {
-    setUsername(personaId);
-    setPassword("ClinovaDemo2026!");
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim()) {
+      setError("Please enter your username or work email.");
+      return;
+    }
+    if (!password) {
+      setError("Please enter your password.");
+      return;
+    }
+    await executeLogin(username, password);
+  };
+
+  const handleSsoClick = async () => {
+    setSsoLoading(true);
+    setError(null);
+    // Instant organization SSO authentication using active demo credentials
+    await executeLogin(selectedRole, "ClinovaDemo2026!");
   };
 
   return (
-    <div style={{ maxWidth: 1040, margin: "20px auto", padding: "0 var(--s-4)" }}>
-      <div className="grid grid-2 gap-6" style={{ alignItems: "start" }}>
-        {/* Left Card: Login Form */}
-        <div className="card" style={{ padding: "var(--s-6)" }}>
-          <div className="stack gap-1" style={{ marginBottom: 20 }}>
-            <span className="badge badge-teal" style={{ alignSelf: "flex-start" }}>
-              Secure Clinical Gateway
-            </span>
-            <h1 style={{ fontSize: "var(--fs-2xl)", color: "var(--navy-900)", marginTop: 6 }}>
-              Sign In to CLINOVA AI
-            </h1>
-            <p className="small muted">
-              Continuous care intelligence, facility feasibility, and clinical orchestration.
-            </p>
-          </div>
-
-          {error && (
-            <div className="alert alert-error" style={{ marginBottom: 16 }}>
-              <AlertTriangle style={{ width: 16, height: 16 }} aria-hidden="true" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="stack gap-4">
-            <div className="field">
-              <label className="label">
-                Username or Persona Identifier <span className="req">*</span>
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="input"
-                placeholder="e.g. clinician, nurse, receptionist"
-              />
-            </div>
-
-            <div className="field">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <label className="label">
-                  Password <span className="req">*</span>
-                </label>
-                <span className="xs muted" style={{ fontSize: "11px" }}>
-                  Demo: <code>ClinovaDemo2026!</code>
-                </span>
-              </div>
-              <div style={{ position: "relative" }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="input"
-                  style={{ paddingRight: 38 }}
+    <div style={{ maxWidth: 1100, margin: "20px auto", padding: "0 var(--s-3)" }}>
+      <div className="auth">
+        {/* LEFT PANE: Sign-in Form */}
+        <div className="auth-panel">
+          {/* Top Bar: Brand & Demo badge */}
+          <div className="row between" style={{ marginBottom: 24 }}>
+            <Link href="/" className="row gap-2" style={{ textDecoration: "none" }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  minWidth: 32,
+                  minHeight: 32,
+                  borderRadius: "var(--r-md)",
+                  border: "1px solid var(--border)",
+                  backgroundColor: "var(--navy-800)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                }}
+              >
+                <Image
+                  src="/branding/clinova-ai-mark.png"
+                  alt="CLINOVA AI Logo"
+                  width={24}
+                  height={24}
+                  priority
+                  style={{ objectFit: "contain" }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span
                   style={{
-                    position: "absolute",
-                    right: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--text-muted, #94a3b8)",
-                    padding: 4,
-                    display: "flex",
-                    alignItems: "center",
+                    fontSize: "1.0625rem",
+                    fontWeight: 800,
+                    color: "var(--navy-900)",
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.15,
                   }}
                 >
-                  {showPassword ? (
-                    <EyeOff style={{ width: 16, height: 16 }} aria-hidden="true" />
-                  ) : (
-                    <Eye style={{ width: 16, height: 16 }} aria-hidden="true" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "var(--fs-xs)" }}>
-              <span className="xs muted">
-                Forgot password? Contact facility sysadmin.
-              </span>
-              <Link href="/register" className="xs link" style={{ color: "var(--teal-600)", fontWeight: 600 }}>
-                Register Staff Account
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary btn-lg btn-block"
-              style={{ marginTop: 8 }}
-            >
-              <LogIn style={{ width: 16, height: 16 }} aria-hidden="true" />
-              <span>{loading ? "Authenticating Session..." : "Sign In to Workstation"}</span>
-            </button>
-          </form>
-
-          {/* Quick Demo Persona Shortcuts */}
-          <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-            <span className="section-title" style={{ display: "block", marginBottom: 10 }}>
-              Quick Demonstration Personas:
-            </span>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {DEMO_PERSONAS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handleQuickSelect(p.id, p.target)}
-                  className={`btn btn-sm ${username === p.id ? "btn-primary" : "btn-secondary"}`}
-                  style={{ fontSize: "var(--fs-xs)" }}
+                  CLINOVA <span style={{ color: "var(--teal-600)" }}>AI</span>
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.625rem",
+                    color: "var(--teal-700)",
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    lineHeight: 1.2,
+                  }}
                 >
-                  <p.icon style={{ width: 12, height: 12 }} aria-hidden="true" />
-                  <span>{p.name} ({p.role})</span>
-                </button>
-              ))}
+                  Continuous Care
+                </span>
+              </div>
+            </Link>
+
+            <span className="demo-ribbon demo-ribbon-teal">
+              <span className="dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--teal-600)" }} />
+              Demo Environment
+            </span>
+          </div>
+
+          {/* Form Wrap */}
+          <div className="auth-form-wrap">
+            <div className="stack gap-1" style={{ marginBottom: 20 }}>
+              <h1 style={{ fontSize: "var(--fs-2xl)", color: "var(--navy-900)", fontWeight: 700 }}>
+                Welcome to Clinova AI
+              </h1>
+              <p className="small muted">
+                Your clinical workspace, organized around better care.
+              </p>
             </div>
+
+            {error && (
+              <div className="alert alert-error" style={{ marginBottom: 16 }}>
+                <AlertTriangle style={{ width: 16, height: 16 }} aria-hidden="true" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Organization SSO Button */}
+            <button
+              type="button"
+              onClick={handleSsoClick}
+              disabled={loading || ssoLoading}
+              className="btn btn-secondary btn-lg btn-block"
+              style={{ marginBottom: 16, justifyContent: "center", gap: 10 }}
+            >
+              <Building style={{ width: 18, height: 18, color: "var(--teal-700)" }} aria-hidden="true" />
+              <span>{ssoLoading ? "Connecting to Hospital SSO..." : "Sign in with Organization SSO"}</span>
+            </button>
+
+            {/* Divider */}
+            <div className="row gap-3 xs muted" style={{ marginBottom: 16 }}>
+              <hr className="grow" style={{ borderColor: "var(--border)", borderStyle: "solid", borderWidth: "1px 0 0 0" }} />
+              <span>or sign in with credentials</span>
+              <hr className="grow" style={{ borderColor: "var(--border)", borderStyle: "solid", borderWidth: "1px 0 0 0" }} />
+            </div>
+
+            <form onSubmit={handleFormSubmit} className="stack gap-4">
+              {/* Role Quick Selector */}
+              <div className="field">
+                <label className="label" htmlFor="role-select">
+                  <span>Demo: Sign in as persona</span>
+                  <span className="req">*</span>
+                </label>
+                <select
+                  id="role-select"
+                  className="select"
+                  value={selectedRole}
+                  onChange={(e) => handleRoleSelectChange(e.target.value)}
+                >
+                  {DEMO_ROLES.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.label} — {role.desc}
+                    </option>
+                  ))}
+                </select>
+                <span className="hint">
+                  Role controls workspace access (e.g. only clinicians can sign consultation notes).
+                </span>
+              </div>
+
+              {/* Username / Email */}
+              <div className="field">
+                <label className="label" htmlFor="username-input">
+                  <span>Work Email or Username</span>
+                  <span className="req">*</span>
+                </label>
+                <div className="input-group">
+                  <Mail style={{ width: 16, height: 16, color: "var(--text-4)" }} aria-hidden="true" />
+                  <input
+                    id="username-input"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    className="input"
+                    placeholder="name@clinic.org"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="field">
+                <div className="row between">
+                  <label className="label" htmlFor="password-input">
+                    <span>Password</span>
+                    <span className="req">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setForgotModal(true)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ padding: "0 4px", fontSize: "11px", color: "var(--teal-700)" }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="input-group">
+                  <KeyRound style={{ width: 16, height: 16, color: "var(--text-4)" }} aria-hidden="true" />
+                  <input
+                    id="password-input"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="input"
+                    placeholder="Enter password"
+                    style={{ paddingRight: 40 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="input-action btn btn-ghost btn-icon btn-sm"
+                  >
+                    {showPassword ? (
+                      <EyeOff style={{ width: 15, height: 15 }} aria-hidden="true" />
+                    ) : (
+                      <Eye style={{ width: 15, height: 15 }} aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading || ssoLoading}
+                className="btn btn-primary btn-lg btn-block"
+                style={{ marginTop: 4, justifyContent: "center" }}
+              >
+                <LogIn style={{ width: 18, height: 18 }} aria-hidden="true" />
+                <span>{loading ? "Signing in..." : "Sign in"}</span>
+              </button>
+
+              <p className="xs muted" style={{ textAlign: "center", margin: "4px 0 0" }}>
+                Demo password: <code className="mono">ClinovaDemo2026!</code> for all pre-seeded accounts.
+              </p>
+            </form>
+          </div>
+
+          {/* Footer note */}
+          <div className="row between xs muted" style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+            <span>Protected by Role-Based Access Control</span>
+            <span>Sessions time out after 15 minutes of inactivity</span>
           </div>
         </div>
 
-        {/* Right Card: Persona Reference & Security Governance */}
-        <div className="stack gap-4">
-          <div className="card" style={{ backgroundColor: "var(--navy-900)", color: "#fff", padding: "var(--s-6)" }}>
-            <h2 style={{ fontSize: "var(--fs-lg)", color: "#fff", marginBottom: 8 }}>
-              Role-Aware Clinical Isolation
-            </h2>
-            <p className="xs subtle" style={{ color: "#c6d3e1", lineHeight: 1.6, marginBottom: 16 }}>
-              CLINOVA AI strictly separates permissions across the healthcare continuum. Choose a persona to enter their dedicated workspace:
-            </p>
+        {/* RIGHT PANE: Workflow Continuum Showcase */}
+        <div className="auth-aside">
+          <div className="stack gap-4">
+            <span className="demo-ribbon" style={{ alignSelf: "flex-start", background: "rgba(255,255,255,0.08)", color: "#9fb3c8", borderColor: "rgba(255,255,255,0.15)" }}>
+              AI Clinical Workflow Assistant
+            </span>
 
-            <div className="stack gap-2">
-              {DEMO_PERSONAS.map((p) => (
-                <div
-                  key={p.id}
-                  onClick={() => handleQuickSelect(p.id, p.target)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "8px 12px",
-                    borderRadius: "var(--r-md)",
-                    backgroundColor: username === p.id ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)",
-                    cursor: "pointer",
-                    border: username === p.id ? "1px solid var(--teal-600)" : "1px solid transparent",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <div className="row gap-2">
-                    <p.icon style={{ width: 16, height: 16, color: "var(--teal-100)" }} aria-hidden="true" />
-                    <div>
-                      <strong style={{ fontSize: "var(--fs-sm)", display: "block", color: "#fff" }}>
-                        {p.name}
-                      </strong>
-                      <span style={{ fontSize: "11px", color: "#98a2b3" }}>{p.desc}</span>
-                    </div>
-                  </div>
-                  <ArrowRight style={{ width: 14, height: 14, color: "#98a2b3" }} aria-hidden="true" />
+            <div>
+              <h2>Less paperwork. More time for patient care.</h2>
+              <p style={{ color: "#9fb3c8", maxWidth: 460, marginTop: 10, lineHeight: 1.6, fontSize: "var(--fs-base)" }}>
+                Clinova AI organises patient information, prepares documentation and coordinates follow-ups — while healthcare professionals stay in control of every clinical decision.
+              </p>
+            </div>
+
+            {/* 6 Continuous Flow Steps */}
+            <div className="stack gap-2" style={{ maxWidth: 460, marginTop: 8 }}>
+              {FLOW_STEPS.map((item) => (
+                <div key={item.step} className="flow-step">
+                  <span className="n">{item.step}</span>
+                  <span style={{ color: "#e2e8f0", fontWeight: 500 }}>{item.title}</span>
+                  <span
+                    className="who"
+                    style={{
+                      color: item.actor.includes("Clinician") ? "#5fd3c7" : "#94a3b8",
+                      background: item.actor.includes("Clinician") ? "rgba(95, 211, 199, 0.12)" : "rgba(255, 255, 255, 0.06)",
+                    }}
+                  >
+                    {item.actor}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="card" style={{ padding: "var(--s-5)" }}>
-            <div className="row gap-2" style={{ marginBottom: 6 }}>
-              <ShieldCheck style={{ width: 16, height: 16, color: "var(--success)" }} aria-hidden="true" />
-              <strong className="small">Compliance & Safety Safeguards</strong>
-            </div>
-            <p className="xs muted" style={{ lineHeight: 1.5, margin: 0 }}>
-              Strictly non-diagnostic clinical decision support. Zero autonomous clinical actions. Server-side RBAC and DPDP Act 2023 certified.
-            </p>
+          {/* Bottom Security Highlights */}
+          <div className="row gap-4 xs" style={{ color: "#8aa0b8", marginTop: 24, flexWrap: "wrap" }}>
+            <span className="row gap-2">
+              <ShieldCheck style={{ width: 15, height: 15, color: "#5fd3c7" }} aria-hidden="true" />
+              Role-Based Access
+            </span>
+            <span className="row gap-2">
+              <Clock style={{ width: 15, height: 15, color: "#38bdf8" }} aria-hidden="true" />
+              Full Audit Trail
+            </span>
+            <span>Non-Diagnostic Clinical Safety Invariant</span>
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {forgotModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(13, 33, 53, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+            padding: 16,
+          }}
+          onClick={() => setForgotModal(false)}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: 420, width: "100%", padding: "var(--s-6)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row gap-2" style={{ marginBottom: 12 }}>
+              <KeyRound style={{ width: 20, height: 20, color: "var(--teal-600)" }} aria-hidden="true" />
+              <h3 style={{ fontSize: "var(--fs-lg)", margin: 0 }}>Demo Account Credentials</h3>
+            </div>
+            <p className="small subtle" style={{ lineHeight: 1.5, marginBottom: 16 }}>
+              All demo persona accounts are pre-configured with the default demo password:
+            </p>
+            <div
+              style={{
+                padding: "10px 14px",
+                background: "var(--surface-sunken)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--r-md)",
+                marginBottom: 16,
+                fontSize: "var(--fs-sm)",
+              }}
+            >
+              Password: <code className="mono strong">ClinovaDemo2026!</code>
+            </div>
+            <p className="xs muted" style={{ lineHeight: 1.5, marginBottom: 16 }}>
+              Select any role from the dropdown menu to sign in as Doctor, Nurse, Receptionist, Facility Admin, or Patient.
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              onClick={() => setForgotModal(false)}
+            >
+              Close and Continue
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

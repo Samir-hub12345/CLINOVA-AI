@@ -205,19 +205,19 @@ export const TopBar: React.FC<TopBarProps> = ({
                 style={{
                   fontSize: "1.0625rem",
                   fontWeight: 800,
-                  color: "var(--clinova-text-primary)",
+                  color: "var(--navy-900, #0d2135)",
                   letterSpacing: "-0.02em",
                   display: "block",
                   lineHeight: 1.15,
                   whiteSpace: "nowrap",
                 }}
               >
-                CLINOVA AI
+                CLINOVA <span style={{ color: "var(--teal-600, #0f9d91)" }}>AI</span>
               </span>
               <span
                 style={{
                   fontSize: "0.625rem",
-                  color: "var(--clinova-accent)",
+                  color: "var(--teal-700, #0b7d73)",
                   fontWeight: 700,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
@@ -353,14 +353,39 @@ export const TopBar: React.FC<TopBarProps> = ({
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => setLoginModalOpen(true)}
-                  className="clinova-btn clinova-btn-primary"
-                  style={{ fontSize: "0.75rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: 6 }}
-                >
-                  <LogIn style={{ width: 14, height: 14 }} aria-hidden="true" />
-                  <span>Sign In</span>
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Link
+                    href="/login"
+                    className="btn btn-primary btn-sm"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+                  >
+                    <LogIn style={{ width: 14, height: 14 }} aria-hidden="true" />
+                    <span>Sign In</span>
+                  </Link>
+                  <select
+                    aria-label="Demo Persona Quick Select"
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) handleRoleChange(e.target.value);
+                    }}
+                    className="select"
+                    style={{
+                      height: 30,
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      padding: "2px 24px 2px 8px",
+                      maxWidth: 130,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="" disabled>Demo Persona</option>
+                    {personas.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.full_name} ({p.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 
