@@ -23,30 +23,30 @@ import {
 export default function HomePage() {
   const platformStats = [
     {
-      label: "Production Architecture",
-      value: "₹0 Stack",
-      note: "100% open-source, self-hostable • Zero paid API fees",
-      icon: Server,
-      tile: "tile-teal",
-    },
-    {
-      label: "Privacy & Statutory Compliance",
-      value: "Zero-PII",
-      note: "DPDP Act 2023 & NMC RMP Regulations 2023 aligned",
+      label: "Zero-PII & Statutory Compliance",
+      value: "DPDP Act 2023",
+      note: "Full alignment with DPDP Act 2023 & NMC Regulations. Zero PII stored or sent to 3rd-party APIs.",
       icon: ShieldCheck,
       tile: "tile-navy",
     },
     {
+      label: "₹0 Zero-Cost Production Stack",
+      value: "Open-Source",
+      note: "100% self-hostable open architecture • Zero required commercial API fees",
+      icon: Server,
+      tile: "tile-teal",
+    },
+    {
       label: "Clinical Guardrails",
       value: "Deterministic",
-      note: "Dual-engine NEWS2 & Shock Index vital algorithms",
+      note: "Dual-engine NEWS2 & Shock Index vital acquisition algorithms",
       icon: HeartPulse,
       tile: "tile-warning",
     },
     {
-      label: "Emergency Protocol",
-      value: "Paschim Banga",
-      note: "Constitutional non-refusal emergency resuscitation",
+      label: "Paschim Banga Doctrine",
+      value: "Emergency Priority",
+      note: "Supreme Court constitutional emergency doctrine. Resuscitation without paperwork delay.",
       icon: AlertOctagon,
       tile: "tile-info",
     },
@@ -570,45 +570,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. CLINICAL GOVERNANCE & STATUTORY PILLARS */}
-      <section className="grid grid-3 gap-4" aria-labelledby="pillars-heading">
-        <h2 id="pillars-heading" className="sr-only">Clinical Governance & Statutory Pillars</h2>
-        <div className="card">
-          <div className="card-body tight stack gap-2">
-            <div className="row gap-2">
-              <ShieldCheck style={{ width: 18, height: 18, color: "var(--success)" }} aria-hidden="true" />
-              <h4 style={{ fontSize: "0.9375rem", margin: 0 }}>Zero-PII & Statutory Compliance</h4>
-            </div>
-            <p className="xs subtle" style={{ margin: 0, lineHeight: 1.5 }}>
-              Full statutory alignment with India&apos;s DPDP Act 2023 and NMC RMP Regulations 2023. Zero personal health identifiers transmitted to commercial third-party APIs.
-            </p>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-body tight stack gap-2">
-            <div className="row gap-2">
-              <Building2 style={{ width: 18, height: 18, color: "var(--info)" }} aria-hidden="true" />
-              <h4 style={{ fontSize: "0.9375rem", margin: 0 }}>₹0 Zero-Cost Production Stack</h4>
-            </div>
-            <p className="xs subtle" style={{ margin: 0, lineHeight: 1.5 }}>
-              Engineered exclusively on self-hostable open technologies. Zero required paid API subscriptions for core clinical triage, vital risk scoring, or referral routing.
-            </p>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-body tight stack gap-2">
-            <div className="row gap-2">
-              <AlertOctagon style={{ width: 18, height: 18, color: "var(--error)" }} aria-hidden="true" />
-              <h4 style={{ fontSize: "0.9375rem", margin: 0 }}>Paschim Banga Doctrine</h4>
-            </div>
-            <p className="xs subtle" style={{ margin: 0, lineHeight: 1.5 }}>
-              Supreme Court constitutional emergency doctrine. Administrative delays or lacking paperwork must never prevent clinical resuscitation in life-threatening conditions.
-            </p>
-          </div>
-        </div>
-      </section>
 
       {/* 7. STATUTORY CLINICAL NON-DELEGATION NOTICE */}
       <section

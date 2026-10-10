@@ -133,19 +133,93 @@ export const TopBar: React.FC<TopBarProps> = ({
     }
   };
 
-  const navLinks = [
-    { label: "Overview", href: "/" },
-    { label: "Reception", href: "/staff/reception" },
-    { label: "Patient Intake", href: "/patient" },
-    { label: "Nurse Triage", href: "/staff/triage" },
-    { label: "Doctor Review", href: "/staff/review" },
-    { label: "Referrals", href: "/referrals" },
-    { label: "Facilities", href: "/facilities" },
-    { label: "System", href: "/system" },
-  ];
+  const userRole = (currentUser?.role || "").toLowerCase();
+  const isSystemAdmin = Boolean(
+    currentUser &&
+      (userRole === "admin" ||
+        userRole === "system_admin" ||
+        userRole === "system administrator")
+  );
+  const isFacilityAdmin = Boolean(
+    currentUser && (userRole === "facility_admin" || isSystemAdmin)
+  );
+  const isClinicalStaff = Boolean(
+    currentUser &&
+      (userRole === "clinician" ||
+        userRole === "doctor" ||
+        userRole === "nurse" ||
+        userRole === "receptionist" ||
+        isFacilityAdmin ||
+        isSystemAdmin)
+  );
+
+  // Dynamic navigation links:
+  // Public/unauthenticated landing page visitors see only public navigation links.
+  // Authenticated users see only their authorized role workstations.
+  const getNavLinks = () => {
+    if (!currentUser) {
+      return [
+        { label: "Overview", href: "/" },
+        { label: "Capabilities", href: "/#capabilities" },
+        { label: "Workflow", href: "/#workflow" },
+        { label: "Role Architecture", href: "/#roles" },
+        { label: "Patient Portal", href: "/patient" },
+      ];
+    }
+
+    switch (userRole) {
+      case "clinician":
+      case "doctor":
+        return [
+          { label: "Doctor Review", href: "/staff/review" },
+          { label: "Clinical Cases", href: "/staff/cases/CASE-SYNTH-003" },
+          { label: "Referrals", href: "/referrals" },
+          { label: "Facilities", href: "/facilities" },
+        ];
+      case "nurse":
+        return [
+          { label: "Nurse Triage", href: "/staff/triage" },
+          { label: "Patient Intake Queue", href: "/staff" },
+          { label: "Facilities", href: "/facilities" },
+        ];
+      case "receptionist":
+        return [
+          { label: "Reception Desk", href: "/staff/reception" },
+          { label: "Digital Intake", href: "/patient/intake" },
+        ];
+      case "facility_admin":
+        return [
+          { label: "Facility Resources", href: "/facilities" },
+          { label: "Referral Hub", href: "/referrals" },
+          { label: "Staff Overview", href: "/staff" },
+        ];
+      case "admin":
+      case "system_admin":
+      case "system administrator":
+        return [
+          { label: "System Audit Ledger", href: "/system" },
+          { label: "Facility Infrastructure", href: "/facilities" },
+          { label: "Staff Directory", href: "/staff" },
+        ];
+      case "patient":
+        return [
+          { label: "My Health Record", href: "/patient" },
+          { label: "Digital Intake", href: "/patient/intake" },
+        ];
+      default:
+        return [
+          { label: "Overview", href: "/" },
+          { label: "Patient Portal", href: "/patient" },
+          { label: "Staff Workspace", href: "/staff" },
+        ];
+    }
+  };
+
+  const navLinks = getNavLinks();
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
+    if (href.startsWith("/#")) return false;
     return pathname.startsWith(href);
   };
 
@@ -295,8 +369,11 @@ export const TopBar: React.FC<TopBarProps> = ({
 
             {/* Clinical Notifications & Quick Drawer Action Toggles */}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <NotificationCenter />
-              {onOpenReferralDrawer && (
+              {/* Notifications: only for authenticated sessions */}
+              {currentUser && <NotificationCenter />}
+
+              {/* Referral Drawer: authorized clinical staff */}
+              {isClinicalStaff && onOpenReferralDrawer && (
                 <button
                   onClick={onOpenReferralDrawer}
                   className="clinova-icon-btn hide-mobile"
@@ -306,7 +383,9 @@ export const TopBar: React.FC<TopBarProps> = ({
                   <Share2 style={{ width: 15, height: 15 }} aria-hidden="true" />
                 </button>
               )}
-              {onOpenFacilityDrawer && (
+
+              {/* Facility Drawer: authorized clinical / facility staff */}
+              {isClinicalStaff && onOpenFacilityDrawer && (
                 <button
                   onClick={onOpenFacilityDrawer}
                   className="clinova-icon-btn hide-mobile"
@@ -316,14 +395,16 @@ export const TopBar: React.FC<TopBarProps> = ({
                   <Building2 style={{ width: 15, height: 15 }} aria-hidden="true" />
                 </button>
               )}
-              {onOpenSystemDrawer && (
+
+              {/* System Audit Drawer: strictly for Admin role */}
+              {isSystemAdmin && onOpenSystemDrawer && (
                 <button
                   onClick={onOpenSystemDrawer}
                   className="clinova-icon-btn hide-mobile"
-                  title="Open System Audit Drawer"
+                  title="Open System Audit Drawer (Administrator Access Only)"
                   aria-label="Open System Audit Drawer"
                 >
-                  <ShieldCheck style={{ width: 15, height: 15 }} aria-hidden="true" />
+                  <ShieldCheck style={{ width: 15, height: 15, color: "var(--success, #0f9d91)" }} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -502,63 +583,66 @@ export const TopBar: React.FC<TopBarProps> = ({
               ))}
             </div>
 
-            {/* Mobile Clinical Drawer Actions */}
-            <div
-              style={{
-                borderTop: "1px solid var(--clinova-border)",
-                paddingTop: 10,
-                marginTop: 4,
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-              }}
-            >
-              <span className="section-title" style={{ padding: "0 12px", marginBottom: 2 }}>
-                Clinical Coordination
-              </span>
-              {onOpenReferralDrawer && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenReferralDrawer();
-                  }}
-                  className="btn btn-secondary btn-sm"
-                  style={{ justifyContent: "flex-start", margin: "0 8px" }}
-                >
-                  <Share2 style={{ width: 15, height: 15, color: "var(--teal-600)" }} aria-hidden="true" />
-                  <span>Referral Coordination</span>
-                </button>
-              )}
-              {onOpenFacilityDrawer && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenFacilityDrawer();
-                  }}
-                  className="btn btn-secondary btn-sm"
-                  style={{ justifyContent: "flex-start", margin: "0 8px" }}
-                >
-                  <Building2 style={{ width: 15, height: 15, color: "var(--info)" }} aria-hidden="true" />
-                  <span>Facility Resources</span>
-                </button>
-              )}
-              {onOpenSystemDrawer && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenSystemDrawer();
-                  }}
-                  className="btn btn-secondary btn-sm"
-                  style={{ justifyContent: "flex-start", margin: "0 8px" }}
-                >
-                  <ShieldCheck style={{ width: 15, height: 15, color: "var(--success)" }} aria-hidden="true" />
-                  <span>System Audit Ledger</span>
-                </button>
-              )}
-            </div>
+            {/* Mobile Clinical Drawer Actions — Only for authorized staff */}
+            {isClinicalStaff && (
+              <div
+                style={{
+                  borderTop: "1px solid var(--clinova-border)",
+                  paddingTop: 10,
+                  marginTop: 4,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}
+              >
+                <span className="section-title" style={{ padding: "0 12px", marginBottom: 2 }}>
+                  Clinical Coordination
+                </span>
+                {onOpenReferralDrawer && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenReferralDrawer();
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ justifyContent: "flex-start", margin: "0 8px" }}
+                  >
+                    <Share2 style={{ width: 15, height: 15, color: "var(--teal-600)" }} aria-hidden="true" />
+                    <span>Referral Coordination</span>
+                  </button>
+                )}
+                {onOpenFacilityDrawer && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenFacilityDrawer();
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ justifyContent: "flex-start", margin: "0 8px" }}
+                  >
+                    <Building2 style={{ width: 15, height: 15, color: "var(--info)" }} aria-hidden="true" />
+                    <span>Facility Resources</span>
+                  </button>
+                )}
+                {/* System Audit Drawer — strictly for Admin role */}
+                {isSystemAdmin && onOpenSystemDrawer && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenSystemDrawer();
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ justifyContent: "flex-start", margin: "0 8px" }}
+                  >
+                    <ShieldCheck style={{ width: 15, height: 15, color: "var(--success)" }} aria-hidden="true" />
+                    <span>System Audit Ledger (Admin)</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Mobile Persona Switcher */}
             <div
