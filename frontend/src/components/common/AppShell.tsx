@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -37,6 +38,7 @@ import { useClinova, ClinovaProvider } from "@/lib/referenceContext";
 import { EnvironmentBanner } from "./EnvironmentBanner";
 import { DemoBanner } from "./DemoBanner";
 import { Footer } from "./Footer";
+import { LandingHeader } from "@/components/landing/LandingHeader";
 import { ReferralDrawer } from "@/components/drawers/ReferralDrawer";
 import { FacilityDrawer } from "@/components/drawers/FacilityDrawer";
 import { SystemAuditDrawer } from "@/components/drawers/SystemAuditDrawer";
@@ -529,8 +531,9 @@ const InnerAppShell: React.FC<AppShellProps> = ({
       ) : (
         /* Public Pages (Landing, Auth, Static) */
         <div className="clinova-public-shell">
-          <main className="clinova-main">
-            <div className="clinova-container">{children}</div>
+          <LandingHeader />
+          <main className={pathname === "/" ? "clinova-landing-main" : "clinova-main"}>
+            {pathname === "/" ? children : <div className="clinova-container">{children}</div>}
           </main>
           <Footer />
         </div>

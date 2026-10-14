@@ -12,7 +12,8 @@
     "test:auth": "node --loader ./tests/resolve-alias.mjs tests/authStability.test.mjs",
     "test:workflow": "node --loader ./tests/resolve-alias.mjs tests/workflowAndRoutes.test.mjs",
     "test:intake-audit": "node tests/intakeSubsystemAudit.test.mjs",
-    "test": "npm run typecheck && npm run test:offline && npm run test:auth && npm run test:workflow && npm run test:intake-audit"
+    "test:landing": "node tests/landingPageAudit.test.mjs",
+    "test": "npm run typecheck && npm run test:offline && npm run test:auth && npm run test:workflow && npm run test:intake-audit && npm run test:landing"
   },
   "dependencies": {
     "clsx": "^2.1.1",
